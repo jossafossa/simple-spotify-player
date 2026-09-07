@@ -1,0 +1,35 @@
+:root {
+  --color-bg: #121212;
+  --color-surface: #181818;
+  --color-surface-raised: #282828;
+  --color-text: #ffffff;
+  --color-text-muted: #b3b3b3;
+  --color-accent: #1db954;
+  --color-border: #2a2a2a;
+
+  font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+img {
+  display: block;
+}
