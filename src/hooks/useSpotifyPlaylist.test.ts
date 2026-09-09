@@ -71,12 +71,13 @@ describe('useSpotifyPlaylist', () => {
   })
 
   it('treats a 403 as a refused playlist', async () => {
-    mockedFetchContextPlaylist.mockRejectedValue(new SpotifyRequestError(403, '/playlists/p1'))
+    mockedFetchContextPlaylist.mockRejectedValue(new SpotifyRequestError(403, '/playlists/p1/items', 'Insufficient client scope'))
 
     const { result } = renderHook(() => useSpotifyPlaylist('token', 'spotify:playlist:p1'))
 
     await waitFor(() => expect(result.current.status).toBe('forbidden'))
     expect(result.current.errorStatus).toBe(403)
+    expect(result.current.errorReason).toBe('Insufficient client scope')
   })
 
   it('refetches when asked to reload after a failure', async () => {

@@ -1,8 +1,8 @@
 import type { Playlist, PlaylistTrack } from './types'
 
 const API_BASE = 'https://api.spotify.com/v1'
-const PLAYLIST_PAGE_SIZE = 100
-/** The album tracks endpoint caps out lower than the playlist one. */
+/** Both listing endpoints cap a page at 50 items. */
+const PLAYLIST_PAGE_SIZE = 50
 const ALBUM_PAGE_SIZE = 50
 /** Pages are fetched in batches this wide to stay clear of rate limiting. */
 const PAGE_BATCH_SIZE = 5
@@ -18,12 +18,31 @@ export type SpotifyContext = {
 export class SpotifyRequestError extends Error {
   status: number
   path: string
+  /** Spotify's own explanation, which is far more specific than the status. */
+  reason: string | undefined
 
-  constructor(status: number, path: string) {
-    super(`Spotify request to ${path} failed with status ${status}`)
+  constructor(status: number, path: string, reason?: string) {
+    super(
+      `Spotify request to ${path} failed with status ${status}` +
+        (reason ? `: ${reason}` : ''),
+    )
     this.name = 'SpotifyRequestError'
     this.status = status
     this.path = path
+    this.reason = reason
+  }
+}
+
+type ApiErrorBody = {
+  error?: { message?: string | null } | null
+}
+
+const readErrorReason = async (response: Response): Promise<string | undefined> => {
+  try {
+    const body = (await response.json()) as ApiErrorBody
+    return body.error?.message ?? undefined
+  } catch {
+    return undefined
   }
 }
 
@@ -47,7 +66,7 @@ const request = async <T>(accessToken: string, path: string, init: RequestInit =
   })
 
   if (!response.ok) {
-    throw new SpotifyRequestError(response.status, path)
+    throw new SpotifyRequestError(response.status, path, await readErrorReason(response))
   }
 
   // Playback commands answer 202/204 with an empty body.
@@ -63,6 +82,15 @@ type ApiTrack = {
   name?: string | null
   duration_ms?: number | null
   artists?: { name: string }[] | null
+}
+
+/**
+ * The February 2026 API renamed the playlist listing's `track` field to
+ * `item`; both are accepted so a rollback either way keeps working.
+ */
+type ApiPlaylistItem = {
+  item?: ApiTrack | null
+  track?: ApiTrack | null
 }
 
 type Page<TItem> = {
@@ -139,13 +167,15 @@ const fetchAllTracks = async <TItem>(
 const fetchPlaylistContext = async (accessToken: string, playlistId: string): Promise<Playlist> => {
   const [details, tracks] = await Promise.all([
     request<{ name?: string | null }>(accessToken, `/playlists/${playlistId}?fields=name`),
-    fetchAllTracks<{ track: ApiTrack | null }>(
+    // /tracks was removed for development-mode apps in March 2026; /items is
+    // its replacement, and answers 403 rather than 404 when it isn't allowed.
+    fetchAllTracks<ApiPlaylistItem>(
       accessToken,
       (offset) =>
-        `/playlists/${playlistId}/tracks?limit=${PLAYLIST_PAGE_SIZE}&offset=${offset}` +
-        '&fields=total,items(track(uri,name,duration_ms,artists(name)))',
+        `/playlists/${playlistId}/items?limit=${PLAYLIST_PAGE_SIZE}&offset=${offset}` +
+        '&fields=total,items(item(uri,name,duration_ms,artists(name)))',
       PLAYLIST_PAGE_SIZE,
-      (item) => toPlaylistTrack(item.track),
+      (entry) => toPlaylistTrack(entry.item ?? entry.track),
     ),
   ])
 

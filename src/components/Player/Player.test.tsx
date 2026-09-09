@@ -18,6 +18,7 @@ vi.mock('~/hooks/useSpotifyPlaylist', () => ({
     status: 'empty',
     playlist: undefined,
     errorStatus: undefined,
+    errorReason: undefined,
     reload: vi.fn(),
   })),
 }))
@@ -176,6 +177,7 @@ describe('Player', () => {
         ],
       },
       errorStatus: undefined,
+      errorReason: undefined,
       reload: vi.fn(),
     })
     const user = userEvent.setup()
@@ -220,6 +222,7 @@ describe('Player', () => {
       status: 'loading',
       playlist: undefined,
       errorStatus: undefined,
+      errorReason: undefined,
       reload: vi.fn(),
     })
 

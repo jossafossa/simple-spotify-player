@@ -22,6 +22,8 @@ export type UseSpotifyPlaylistResult = {
   playlist: Playlist | undefined
   /** The HTTP status behind a failure, so the UI can name it rather than guess. */
   errorStatus: number | undefined
+  /** Spotify's own explanation of the failure, when it gave one. */
+  errorReason: string | undefined
   reload: () => void
 }
 
@@ -30,6 +32,7 @@ type LoadedContext = {
   status: Exclude<SpotifyPlaylistStatus, 'empty' | 'unsupported' | 'loading'>
   playlist: Playlist | undefined
   errorStatus: number | undefined
+  errorReason: string | undefined
 }
 
 const toFailureStatus = (status: number): LoadedContext['status'] => {
@@ -81,7 +84,13 @@ export const useSpotifyPlaylist = (
     fetchContextPlaylist(accessToken, contextToLoad)
       .then((playlist) => {
         if (!isCancelled) {
-          setLoaded({ contextUri, status: 'ready', playlist, errorStatus: undefined })
+          setLoaded({
+            contextUri,
+            status: 'ready',
+            playlist,
+            errorStatus: undefined,
+            errorReason: undefined,
+          })
         }
       })
       .catch((error: unknown) => {
@@ -89,16 +98,17 @@ export const useSpotifyPlaylist = (
           return
         }
 
-        const errorStatus = error instanceof SpotifyRequestError ? error.status : undefined
+        const isApiError = error instanceof SpotifyRequestError
         // Logged so the exact request and status are visible when the message
         // on screen isn't enough to tell what Spotify objected to.
         console.error('Could not load the playlist for', contextUri, error)
 
         setLoaded({
           contextUri,
-          status: errorStatus === undefined ? 'error' : toFailureStatus(errorStatus),
+          status: isApiError ? toFailureStatus(error.status) : 'error',
           playlist: undefined,
-          errorStatus,
+          errorStatus: isApiError ? error.status : undefined,
+          errorReason: isApiError ? error.reason : undefined,
         })
       })
 
@@ -108,23 +118,42 @@ export const useSpotifyPlaylist = (
   }, [accessToken, contextUri, reloadCount])
 
   if (!accessToken || !contextUri) {
-    return { status: 'empty', playlist: undefined, errorStatus: undefined, reload }
+    return {
+      status: 'empty',
+      playlist: undefined,
+      errorStatus: undefined,
+      errorReason: undefined,
+      reload,
+    }
   }
 
   if (!isSupportedContext(context)) {
-    return { status: 'unsupported', playlist: undefined, errorStatus: undefined, reload }
+    return {
+      status: 'unsupported',
+      playlist: undefined,
+      errorStatus: undefined,
+      errorReason: undefined,
+      reload,
+    }
   }
 
   // A token refresh restarts the fetch; keep showing the tracks we already
   // have for this context instead of blanking the panel.
   if (loaded?.contextUri !== contextUri) {
-    return { status: 'loading', playlist: undefined, errorStatus: undefined, reload }
+    return {
+      status: 'loading',
+      playlist: undefined,
+      errorStatus: undefined,
+      errorReason: undefined,
+      reload,
+    }
   }
 
   return {
     status: loaded.status,
     playlist: loaded.playlist,
     errorStatus: loaded.errorStatus,
+    errorReason: loaded.errorReason,
     reload,
   }
 }

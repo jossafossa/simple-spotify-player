@@ -33,6 +33,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     status: playlistStatus,
     playlist,
     errorStatus: playlistErrorStatus,
+    errorReason: playlistErrorReason,
     reload: reloadPlaylist,
   } = useSpotifyPlaylist(accessToken, contextUri)
 
@@ -147,6 +148,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
         status={playlistStatus}
         playlist={playlist}
         errorStatus={playlistErrorStatus}
+        errorReason={playlistErrorReason}
         currentTrackUri={playbackState.track.uri}
         onSelectTrack={handleSelectTrack}
         onReload={reloadPlaylist}

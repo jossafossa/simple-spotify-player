@@ -22,6 +22,7 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         errorStatus={undefined}
+        errorReason={undefined}
         onReload={vi.fn()}
       />,
     )
@@ -37,6 +38,7 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         errorStatus={undefined}
+        errorReason={undefined}
         onReload={vi.fn()}
       />,
     )
@@ -52,6 +54,7 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         errorStatus={undefined}
+        errorReason={undefined}
         onReload={vi.fn()}
       />,
     )
@@ -67,6 +70,7 @@ describe('PlaylistPanel', () => {
         currentTrackUri="spotify:track:2"
         onSelectTrack={vi.fn()}
         errorStatus={undefined}
+        errorReason={undefined}
         onReload={vi.fn()}
       />,
     )
@@ -86,6 +90,7 @@ describe('PlaylistPanel', () => {
         currentTrackUri="spotify:track:2"
         onSelectTrack={vi.fn()}
         errorStatus={undefined}
+        errorReason={undefined}
         onReload={vi.fn()}
       />,
     )
@@ -105,6 +110,7 @@ describe('PlaylistPanel', () => {
         currentTrackUri="spotify:track:1"
         onSelectTrack={handleSelectTrack}
         errorStatus={undefined}
+        errorReason={undefined}
         onReload={vi.fn()}
       />,
     )
@@ -122,6 +128,7 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         errorStatus={undefined}
+        errorReason={undefined}
         onReload={vi.fn()}
       />,
     )
@@ -129,7 +136,7 @@ describe('PlaylistPanel', () => {
     expect(screen.getByText('2 tracks')).toBeInTheDocument()
   })
 
-  it('asks the user to re-authorise when the token lacks playlist scopes', () => {
+  it('names the ownership rule when Spotify refuses the listing', () => {
     render(
       <PlaylistPanel
         status="forbidden"
@@ -137,11 +144,12 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         errorStatus={undefined}
+        errorReason={undefined}
         onReload={vi.fn()}
       />,
     )
 
-    expect(screen.getByText(/log out and back in/)).toBeInTheDocument()
+    expect(screen.getByText(/playlists you own or collaborate on/)).toBeInTheDocument()
   })
 
   it('explains that Spotify hides its own generated playlists', () => {
@@ -152,6 +160,7 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         errorStatus={undefined}
+        errorReason={undefined}
         onReload={vi.fn()}
       />,
     )
@@ -168,6 +177,7 @@ describe('PlaylistPanel', () => {
         status="forbidden"
         playlist={undefined}
         errorStatus={403}
+        errorReason={'Insufficient client scope'}
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         onReload={handleReload}
@@ -175,6 +185,7 @@ describe('PlaylistPanel', () => {
     )
 
     expect(screen.getByText(/HTTP 403/)).toBeInTheDocument()
+    expect(screen.getByText(/Insufficient client scope/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     expect(handleReload).toHaveBeenCalledOnce()
   })
@@ -189,6 +200,7 @@ describe('PlaylistPanel', () => {
         currentTrackUri="spotify:track:1"
         onSelectTrack={vi.fn()}
         errorStatus={undefined}
+        errorReason={undefined}
         onReload={vi.fn()}
       />,
     )

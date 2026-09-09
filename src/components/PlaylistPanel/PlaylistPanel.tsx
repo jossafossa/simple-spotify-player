@@ -8,6 +8,7 @@ type PlaylistPanelProps = {
   status: SpotifyPlaylistStatus
   playlist: Playlist | undefined
   errorStatus: number | undefined
+  errorReason: string | undefined
   currentTrackUri: string | undefined
   onSelectTrack: (trackUri: string) => void
   onReload: () => void
@@ -18,7 +19,8 @@ const MESSAGES: Record<SpotifyPlaylistStatus, string> = {
   unsupported: 'The current track is not playing from a playlist or album.',
   loading: 'Loading tracks…',
   expired: 'Your Spotify session expired. It will retry after the token refreshes.',
-  forbidden: 'Spotify refused this playlist. If you just added scopes, log out and back in.',
+  forbidden:
+    'Spotify only returns the tracks of playlists you own or collaborate on. Check the console for the exact reason.',
   inaccessible:
     'Spotify hides its own generated playlists (Daily Mix, Discover Weekly, editorial) from apps.',
   error: 'Could not load the tracks for what is playing.',
@@ -41,6 +43,7 @@ const PlaylistPanelComponent = ({
   status,
   playlist,
   errorStatus,
+  errorReason,
   currentTrackUri,
   onSelectTrack,
   onReload,
@@ -64,6 +67,7 @@ const PlaylistPanelComponent = ({
             {MESSAGES[status]}
             {errorStatus !== undefined && ` (HTTP ${errorStatus})`}
           </p>
+          {errorReason && <p className={styles.reason}>Spotify said: “{errorReason}”</p>}
           {FAILED_STATUSES.includes(status) && (
             <button type="button" className={styles.retry} onClick={onReload}>
               Try again

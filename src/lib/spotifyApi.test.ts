@@ -20,13 +20,13 @@ const errorResponse = (status: number): Response =>
   ({ ok: false, status, headers: new Headers() }) as unknown as Response
 
 const playlistItem = (uri: string, name: string) => ({
-  track: { uri, name, duration_ms: 1_000, artists: [{ name: 'Artist' }] },
+  item: { uri, name, duration_ms: 1_000, artists: [{ name: 'Artist' }] },
 })
 
 /** Serves a playlist of `total` tracks, paged the way Spotify pages them. */
-const stubPlaylistOfSize = (total: number, pageSize = 100) => {
+const stubPlaylistOfSize = (total: number, pageSize = 50) => {
   const fetchMock = vi.fn((url: string, _init?: RequestInit) => {
-    if (!url.includes('/tracks')) {
+    if (!url.includes('/items')) {
       return Promise.resolve(jsonResponse({ name: 'My Mix' }))
     }
 
@@ -89,6 +89,56 @@ describe('fetchContextPlaylist', () => {
     })
   })
 
+  it('reads the playlist listing from /items, not the removed /tracks', async () => {
+    const fetchMock = stubPlaylistOfSize(1)
+
+    await fetchContextPlaylist('token', { type: 'playlist', id: 'p1' })
+
+    const paths = fetchMock.mock.calls.map(([url]) => url)
+    expect(paths.some((path) => path.includes('/playlists/p1/items'))).toBe(true)
+    expect(paths.some((path) => path.includes('/playlists/p1/tracks'))).toBe(false)
+  })
+
+  it('still reads a listing that returns the older track field', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve(
+          url.includes('/items')
+            ? jsonResponse({
+                total: 1,
+                items: [
+                  { track: { uri: 'spotify:track:1', name: 'Legacy', duration_ms: 1_000 } },
+                ],
+              })
+            : jsonResponse({ name: 'My Mix' }),
+        ),
+      ),
+    )
+
+    const playlist = await fetchContextPlaylist('token', { type: 'playlist', id: 'p1' })
+
+    expect(playlist.tracks.map((track) => track.name)).toEqual(['Legacy'])
+  })
+
+  it("carries Spotify's own explanation of a failure", async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({
+          ok: false,
+          status: 403,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: () => Promise.resolve({ error: { message: 'Insufficient client scope' } }),
+        } as unknown as Response),
+      ),
+    )
+
+    await expect(
+      fetchContextPlaylist('token', { type: 'playlist', id: 'p1' }),
+    ).rejects.toMatchObject({ status: 403, reason: 'Insufficient client scope' })
+  })
+
   it('loads every page of a playlist far longer than one page', async () => {
     const fetchMock = stubPlaylistOfSize(1_250)
 
@@ -98,8 +148,8 @@ describe('fetchContextPlaylist', () => {
     expect(playlist.tracks[0]!.name).toBe('Track 0')
     expect(playlist.tracks[1_249]!.name).toBe('Track 1249')
 
-    // One details call plus a page per 100 tracks.
-    expect(fetchMock).toHaveBeenCalledTimes(1 + 13)
+    // One details call plus a page per 50 tracks.
+    expect(fetchMock).toHaveBeenCalledTimes(1 + 25)
   })
 
   it('keeps the playlist in its original order across pages', async () => {
@@ -117,11 +167,11 @@ describe('fetchContextPlaylist', () => {
       'fetch',
       vi.fn((url: string) =>
         Promise.resolve(
-          url.includes('/tracks')
+          url.includes('/items')
             ? jsonResponse({
                 total: 3,
                 items: [
-                  { track: null },
+                  { item: null },
                   playlistItem('spotify:local:x', 'Local File'),
                   playlistItem('spotify:track:1', 'Playable'),
                 ],
