@@ -32,10 +32,11 @@ describe('useSpotifyPlaylist', () => {
     expect(mockedFetchContextPlaylist).not.toHaveBeenCalled()
   })
 
-  it('reports contexts it cannot list', () => {
+  it('reports contexts it cannot list, and names the type', () => {
     const { result } = renderHook(() => useSpotifyPlaylist('token', 'spotify:artist:a1'))
 
     expect(result.current.status).toBe('unsupported')
+    expect(result.current.contextType).toBe('artist')
     expect(mockedFetchContextPlaylist).not.toHaveBeenCalled()
   })
 

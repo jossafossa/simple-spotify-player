@@ -1,9 +1,25 @@
 .layout {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: center;
   gap: 24px;
+}
+
+/**
+ * The playlist is taken out of flow so an 800-track list cannot decide how
+ * tall the row is; it fills the height the player card sets instead, leaving
+ * the two the same height whatever is playing.
+ */
+.panelSlot {
+  position: relative;
+  width: min(340px, 90vw);
+  min-height: 280px;
+}
+
+.panelSlot > * {
+  position: absolute;
+  inset: 0;
 }
 
 .artwork {

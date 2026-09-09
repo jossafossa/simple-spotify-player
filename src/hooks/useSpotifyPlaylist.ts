@@ -24,6 +24,8 @@ export type UseSpotifyPlaylistResult = {
   errorStatus: number | undefined
   /** Spotify's own explanation of the failure, when it gave one. */
   errorReason: string | undefined
+  /** What playback is coming from — 'playlist', 'album', 'artist', … */
+  contextType: string | undefined
   reload: () => void
 }
 
@@ -123,6 +125,7 @@ export const useSpotifyPlaylist = (
       playlist: undefined,
       errorStatus: undefined,
       errorReason: undefined,
+      contextType: context?.type,
       reload,
     }
   }
@@ -133,6 +136,7 @@ export const useSpotifyPlaylist = (
       playlist: undefined,
       errorStatus: undefined,
       errorReason: undefined,
+      contextType: context?.type,
       reload,
     }
   }
@@ -145,6 +149,7 @@ export const useSpotifyPlaylist = (
       playlist: undefined,
       errorStatus: undefined,
       errorReason: undefined,
+      contextType: context?.type,
       reload,
     }
   }
@@ -154,6 +159,7 @@ export const useSpotifyPlaylist = (
     playlist: loaded.playlist,
     errorStatus: loaded.errorStatus,
     errorReason: loaded.errorReason,
+    contextType: context?.type,
     reload,
   }
 }

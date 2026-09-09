@@ -19,6 +19,7 @@ vi.mock('~/hooks/useSpotifyPlaylist', () => ({
     playlist: undefined,
     errorStatus: undefined,
     errorReason: undefined,
+    contextType: undefined,
     reload: vi.fn(),
   })),
 }))
@@ -184,6 +185,7 @@ describe('Player', () => {
       },
       errorStatus: undefined,
       errorReason: undefined,
+      contextType: 'playlist',
       reload: vi.fn(),
     })
     const user = userEvent.setup()
@@ -232,6 +234,27 @@ describe('Player', () => {
     expect(screen.getByText(/widevine-license/)).toBeInTheDocument()
   })
 
+  it('keeps the playlist inside the slot that matches the card height', () => {
+    mockedUseSpotifyPlayer.mockReturnValue({
+      status: 'ready',
+      playbackState: buildPlaybackState(),
+      togglePlay: vi.fn(),
+      nextTrack: vi.fn(),
+      previousTrack: vi.fn(),
+      seek: vi.fn(),
+      playTrack: vi.fn(),
+      playbackErrorMessage: undefined,
+      isStalled: false,
+    })
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    // The slot is what lets a long track list scroll instead of stretching
+    // the row past the player card.
+    const panel = screen.getByRole('complementary', { name: 'Playlist' })
+    expect(panel.parentElement?.className).toContain('panelSlot')
+  })
+
   it('loads the playlist for whatever context is playing', () => {
     mockedUseSpotifyPlayer.mockReturnValue({
       status: 'ready',
@@ -249,6 +272,7 @@ describe('Player', () => {
       playlist: undefined,
       errorStatus: undefined,
       errorReason: undefined,
+      contextType: 'playlist',
       reload: vi.fn(),
     })
 

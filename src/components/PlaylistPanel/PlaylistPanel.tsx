@@ -9,30 +9,55 @@ type PlaylistPanelProps = {
   playlist: Playlist | undefined
   errorStatus: number | undefined
   errorReason: string | undefined
+  contextType: string | undefined
   currentTrackUri: string | undefined
   onSelectTrack: (trackUri: string) => void
   onReload: () => void
 }
 
-const MESSAGES: Record<SpotifyPlaylistStatus, string> = {
-  empty: 'Play a playlist to see its tracks here.',
-  unsupported: 'The current track is not playing from a playlist or album.',
-  loading: 'Loading tracks…',
-  expired: 'Your Spotify session expired. It will retry after the token refreshes.',
-  forbidden:
-    'Spotify only returns the tracks of playlists you own or collaborate on. Check the console for the exact reason.',
-  inaccessible:
-    'Spotify hides its own generated playlists (Daily Mix, Discover Weekly, editorial) from apps.',
-  error: 'Could not load the tracks for what is playing.',
-  ready: 'Loading tracks…',
+/** How to name a playback context in a sentence. */
+const CONTEXT_NAMES: Record<string, string> = {
+  playlist: 'a playlist',
+  album: 'an album',
+  artist: 'an artist',
+  collection: 'your Liked Songs',
+  show: 'a podcast',
+  episode: 'a podcast episode',
+  track: 'a single track',
 }
 
-const FAILED_STATUSES: SpotifyPlaylistStatus[] = [
-  'expired',
-  'forbidden',
-  'inaccessible',
-  'error',
-]
+const describeContext = (contextType: string | undefined): string =>
+  (contextType && CONTEXT_NAMES[contextType]) ?? 'something else'
+
+const buildMessage = (status: SpotifyPlaylistStatus, contextType: string | undefined): string => {
+  switch (status) {
+    case 'empty':
+      return 'Play a playlist or album to see its tracks here.'
+    case 'unsupported':
+      return `You're playing ${describeContext(contextType)}, which has no track list to jump around.`
+    case 'expired':
+      return 'Your Spotify session expired. It will retry once the token refreshes.'
+    case 'forbidden':
+      return contextType === 'album'
+        ? "Spotify wouldn't share this album's tracks."
+        : "Spotify wouldn't share this playlist's tracks — it only shares playlists you own or collaborate on."
+    case 'inaccessible':
+      return 'Spotify hides its own generated playlists (Daily Mix, Discover Weekly, editorial) from apps.'
+    case 'error':
+      return 'Could not load the tracks for what is playing.'
+    default:
+      return 'Loading tracks…'
+  }
+}
+
+/** Failures worth offering a retry for. */
+const RETRYABLE_STATUSES: SpotifyPlaylistStatus[] = ['expired', 'forbidden', 'inaccessible', 'error']
+
+/**
+ * Spotify refusing a context it was never going to share is expected, so those
+ * read as plain sentences; only a genuine surprise is worth an HTTP status.
+ */
+const UNEXPECTED_STATUSES: SpotifyPlaylistStatus[] = ['expired', 'error']
 
 /**
  * Memoised because the progress bar re-renders the player several times a
@@ -44,11 +69,13 @@ const PlaylistPanelComponent = ({
   playlist,
   errorStatus,
   errorReason,
+  contextType,
   currentTrackUri,
   onSelectTrack,
   onReload,
 }: PlaylistPanelProps) => {
   const currentTrackRef = useRef<HTMLLIElement>(null)
+  const isUnexpected = UNEXPECTED_STATUSES.includes(status)
 
   // Long playlists scroll, so follow along as playback moves.
   useEffect(() => {
@@ -64,11 +91,13 @@ const PlaylistPanelComponent = ({
       {status !== 'ready' || !playlist ? (
         <div className={styles.notice}>
           <p className={styles.message}>
-            {MESSAGES[status]}
-            {errorStatus !== undefined && ` (HTTP ${errorStatus})`}
+            {buildMessage(status, contextType)}
+            {isUnexpected && errorStatus !== undefined && ` (HTTP ${errorStatus})`}
           </p>
-          {errorReason && <p className={styles.reason}>Spotify said: “{errorReason}”</p>}
-          {FAILED_STATUSES.includes(status) && (
+          {isUnexpected && errorReason && (
+            <p className={styles.reason}>Spotify said: “{errorReason}”</p>
+          )}
+          {RETRYABLE_STATUSES.includes(status) && (
             <button type="button" className={styles.retry} onClick={onReload}>
               Try again
             </button>

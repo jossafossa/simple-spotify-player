@@ -35,6 +35,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     playlist,
     errorStatus: playlistErrorStatus,
     errorReason: playlistErrorReason,
+    contextType: playlistContextType,
     reload: reloadPlaylist,
   } = useSpotifyPlaylist(accessToken, contextUri)
 
@@ -154,15 +155,18 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
         </p>
         {logoutButton}
       </Card>
-      <PlaylistPanel
-        status={playlistStatus}
-        playlist={playlist}
-        errorStatus={playlistErrorStatus}
-        errorReason={playlistErrorReason}
-        currentTrackUri={playbackState.track.uri}
-        onSelectTrack={handleSelectTrack}
-        onReload={reloadPlaylist}
-      />
+      <div className={styles.panelSlot}>
+        <PlaylistPanel
+          status={playlistStatus}
+          playlist={playlist}
+          errorStatus={playlistErrorStatus}
+          errorReason={playlistErrorReason}
+          contextType={playlistContextType}
+          currentTrackUri={playbackState.track.uri}
+          onSelectTrack={handleSelectTrack}
+          onReload={reloadPlaylist}
+        />
+      </div>
     </div>
   )
 }
