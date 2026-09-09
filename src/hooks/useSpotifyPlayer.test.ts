@@ -151,6 +151,43 @@ describe('useSpotifyPlayer', () => {
     expect(player.activateElement).toHaveBeenCalledOnce()
   })
 
+  it('surfaces a playback error without tearing the player down', async () => {
+    const { result } = renderHook(() => useSpotifyPlayer('a-token'))
+
+    await waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(1))
+    const player = FakeSpotifyPlayer.instances[0]!
+
+    act(() => {
+      player.emit('ready', { device_id: 'device-1' })
+      player.emit('playback_error', { message: 'Playback of protected content is not enabled.' })
+    })
+
+    await waitFor(() =>
+      expect(result.current.playbackErrorMessage).toBe(
+        'Playback of protected content is not enabled.',
+      ),
+    )
+    expect(result.current.status).toBe('ready')
+  })
+
+  it('clears a playback error once playback reports state again', async () => {
+    const { result } = renderHook(() => useSpotifyPlayer('a-token'))
+
+    await waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(1))
+    const player = FakeSpotifyPlayer.instances[0]!
+
+    act(() => {
+      player.emit('playback_error', { message: 'nope' })
+    })
+    await waitFor(() => expect(result.current.playbackErrorMessage).toBe('nope'))
+
+    act(() => {
+      player.emit('player_state_changed', buildSdkState())
+    })
+
+    await waitFor(() => expect(result.current.playbackErrorMessage).toBeUndefined())
+  })
+
   it('moves to error status on an authentication error', async () => {
     const { result } = renderHook(() => useSpotifyPlayer('a-token'))
 

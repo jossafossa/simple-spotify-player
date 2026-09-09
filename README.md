@@ -1,3 +1,33 @@
+# Simple Spotify Player
+
+A browser-only Spotify player using PKCE auth and the Web Playback SDK.
+
+## Requirements
+
+- **Spotify Premium.** The Web Playback SDK refuses to play without it.
+- **DRM playback enabled in the browser.** The SDK plays protected content
+  through Widevine. Firefox ships with this behind a setting: if playback is
+  silent while the progress bar keeps moving, turn on
+  *Settings → General → DRM content → "Play DRM-controlled content"* and
+  reload. Chrome, Edge and Safari have it on by default.
+
+## Playlist viewer limitations
+
+The side panel lists the tracks of the playlist or album playback is coming
+from, and clicking one jumps to it. Two things it cannot show, both by
+Spotify's design rather than a bug here:
+
+- **Spotify's own generated playlists** — Daily Mix, Discover Weekly, Release
+  Radar and editorial playlists — return 404 to apps outside
+  [extended quota mode](https://developer.spotify.com/documentation/web-api/concepts/quota-modes),
+  which no personal app has.
+- **Local files** in a playlist, which cannot be started over the Web API.
+
+The panel names the HTTP status behind any other failure, so an unexpected one
+can be told apart from these.
+
+---
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.

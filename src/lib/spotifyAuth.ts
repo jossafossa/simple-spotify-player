@@ -116,7 +116,9 @@ export const exchangeCodeForTokens = async ({
     }),
   )
 
-  return toSpotifyTokens(data, { refreshToken: '' })
+  // The response normally echoes the granted scopes; falling back to what we
+  // just asked for keeps a quiet omission from looking like a scope downgrade.
+  return toSpotifyTokens(data, { refreshToken: '', grantedScopes: [...SPOTIFY_SCOPES] })
 }
 
 type RefreshTokensParams = {

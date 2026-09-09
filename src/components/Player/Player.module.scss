@@ -36,6 +36,17 @@
   font-size: 14px;
 }
 
+.playbackError {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--color-surface-raised);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+  text-align: left;
+}
+
 .hint {
   margin: 0;
   font-size: 11px;

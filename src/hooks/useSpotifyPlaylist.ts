@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   fetchContextPlaylist,
   isSupportedContext,
@@ -12,6 +12,7 @@ export type SpotifyPlaylistStatus =
   | 'unsupported'
   | 'loading'
   | 'ready'
+  | 'expired'
   | 'forbidden'
   | 'inaccessible'
   | 'error'
@@ -19,28 +20,32 @@ export type SpotifyPlaylistStatus =
 export type UseSpotifyPlaylistResult = {
   status: SpotifyPlaylistStatus
   playlist: Playlist | undefined
+  /** The HTTP status behind a failure, so the UI can name it rather than guess. */
+  errorStatus: number | undefined
+  reload: () => void
 }
 
 type LoadedContext = {
   contextUri: string
   status: Exclude<SpotifyPlaylistStatus, 'empty' | 'unsupported' | 'loading'>
   playlist: Playlist | undefined
+  errorStatus: number | undefined
 }
 
-const toFailureStatus = (error: unknown): LoadedContext['status'] => {
-  if (!(error instanceof SpotifyRequestError)) {
-    return 'error'
+const toFailureStatus = (status: number): LoadedContext['status'] => {
+  // An expired access token is routine and resolves on the next refresh, so it
+  // must not be reported as something the user has to go and fix.
+  if (status === 401) {
+    return 'expired'
   }
 
-  // A token issued before a scope was added still authenticates, it just
-  // cannot read playlists — that needs a fresh sign-in, not a retry.
-  if (error.status === 401 || error.status === 403) {
+  if (status === 403) {
     return 'forbidden'
   }
 
   // Spotify's own generated playlists (Daily Mix, Discover Weekly, Release
-  // Radar, editorial ones) are hidden from third-party apps entirely.
-  if (error.status === 404) {
+  // Radar, editorial ones) are hidden from apps outside extended quota mode.
+  if (status === 404) {
     return 'inaccessible'
   }
 
@@ -57,7 +62,12 @@ export const useSpotifyPlaylist = (
   contextUri: string | undefined,
 ): UseSpotifyPlaylistResult => {
   const [loaded, setLoaded] = useState<LoadedContext>()
+  const [reloadCount, setReloadCount] = useState(0)
   const context = parseContextUri(contextUri)
+
+  const reload = useCallback(() => {
+    setReloadCount((count) => count + 1)
+  }, [])
 
   useEffect(() => {
     const contextToLoad = parseContextUri(contextUri)
@@ -71,33 +81,50 @@ export const useSpotifyPlaylist = (
     fetchContextPlaylist(accessToken, contextToLoad)
       .then((playlist) => {
         if (!isCancelled) {
-          setLoaded({ contextUri, status: 'ready', playlist })
+          setLoaded({ contextUri, status: 'ready', playlist, errorStatus: undefined })
         }
       })
       .catch((error: unknown) => {
-        if (!isCancelled) {
-          setLoaded({ contextUri, status: toFailureStatus(error), playlist: undefined })
+        if (isCancelled) {
+          return
         }
+
+        const errorStatus = error instanceof SpotifyRequestError ? error.status : undefined
+        // Logged so the exact request and status are visible when the message
+        // on screen isn't enough to tell what Spotify objected to.
+        console.error('Could not load the playlist for', contextUri, error)
+
+        setLoaded({
+          contextUri,
+          status: errorStatus === undefined ? 'error' : toFailureStatus(errorStatus),
+          playlist: undefined,
+          errorStatus,
+        })
       })
 
     return () => {
       isCancelled = true
     }
-  }, [accessToken, contextUri])
+  }, [accessToken, contextUri, reloadCount])
 
   if (!accessToken || !contextUri) {
-    return { status: 'empty', playlist: undefined }
+    return { status: 'empty', playlist: undefined, errorStatus: undefined, reload }
   }
 
   if (!isSupportedContext(context)) {
-    return { status: 'unsupported', playlist: undefined }
+    return { status: 'unsupported', playlist: undefined, errorStatus: undefined, reload }
   }
 
   // A token refresh restarts the fetch; keep showing the tracks we already
   // have for this context instead of blanking the panel.
   if (loaded?.contextUri !== contextUri) {
-    return { status: 'loading', playlist: undefined }
+    return { status: 'loading', playlist: undefined, errorStatus: undefined, reload }
   }
 
-  return { status: loaded.status, playlist: loaded.playlist }
+  return {
+    status: loaded.status,
+    playlist: loaded.playlist,
+    errorStatus: loaded.errorStatus,
+    reload,
+  }
 }

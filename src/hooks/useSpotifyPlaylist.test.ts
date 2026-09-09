@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fetchContextPlaylist, SpotifyRequestError } from '~/lib/spotifyApi'
 import { useSpotifyPlaylist } from './useSpotifyPlaylist'
@@ -61,16 +61,41 @@ describe('useSpotifyPlaylist', () => {
     expect(result.current.playlist).toBeUndefined()
   })
 
-  it.each([401, 403])('treats a %i as a missing playlist scope', async (status) => {
-    mockedFetchContextPlaylist.mockRejectedValue(new SpotifyRequestError(status))
+  it('treats a 401 as an expired session rather than a scope problem', async () => {
+    mockedFetchContextPlaylist.mockRejectedValue(new SpotifyRequestError(401, '/playlists/p1'))
+
+    const { result } = renderHook(() => useSpotifyPlaylist('token', 'spotify:playlist:p1'))
+
+    await waitFor(() => expect(result.current.status).toBe('expired'))
+    expect(result.current.errorStatus).toBe(401)
+  })
+
+  it('treats a 403 as a refused playlist', async () => {
+    mockedFetchContextPlaylist.mockRejectedValue(new SpotifyRequestError(403, '/playlists/p1'))
 
     const { result } = renderHook(() => useSpotifyPlaylist('token', 'spotify:playlist:p1'))
 
     await waitFor(() => expect(result.current.status).toBe('forbidden'))
+    expect(result.current.errorStatus).toBe(403)
+  })
+
+  it('refetches when asked to reload after a failure', async () => {
+    mockedFetchContextPlaylist.mockRejectedValueOnce(new SpotifyRequestError(500, '/playlists/p1'))
+
+    const { result } = renderHook(() => useSpotifyPlaylist('token', 'spotify:playlist:p1'))
+
+    await waitFor(() => expect(result.current.status).toBe('error'))
+
+    act(() => {
+      result.current.reload()
+    })
+
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(mockedFetchContextPlaylist).toHaveBeenCalledTimes(2)
   })
 
   it('treats a 404 as a playlist Spotify hides from apps', async () => {
-    mockedFetchContextPlaylist.mockRejectedValue(new SpotifyRequestError(404))
+    mockedFetchContextPlaylist.mockRejectedValue(new SpotifyRequestError(404, '/playlists/p1'))
 
     const { result } = renderHook(() => useSpotifyPlaylist('token', 'spotify:playlist:p1'))
 

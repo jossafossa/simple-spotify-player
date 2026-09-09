@@ -7,19 +7,30 @@ import styles from './PlaylistPanel.module.scss'
 type PlaylistPanelProps = {
   status: SpotifyPlaylistStatus
   playlist: Playlist | undefined
+  errorStatus: number | undefined
   currentTrackUri: string | undefined
   onSelectTrack: (trackUri: string) => void
+  onReload: () => void
 }
 
 const MESSAGES: Record<SpotifyPlaylistStatus, string> = {
   empty: 'Play a playlist to see its tracks here.',
   unsupported: 'The current track is not playing from a playlist or album.',
   loading: 'Loading tracks…',
-  forbidden: 'Log out and back in to grant this app access to your playlists.',
-  inaccessible: 'Spotify does not let apps read its own generated playlists, like Daily Mix.',
+  expired: 'Your Spotify session expired. It will retry after the token refreshes.',
+  forbidden: 'Spotify refused this playlist. If you just added scopes, log out and back in.',
+  inaccessible:
+    'Spotify hides its own generated playlists (Daily Mix, Discover Weekly, editorial) from apps.',
   error: 'Could not load the tracks for what is playing.',
   ready: 'Loading tracks…',
 }
+
+const FAILED_STATUSES: SpotifyPlaylistStatus[] = [
+  'expired',
+  'forbidden',
+  'inaccessible',
+  'error',
+]
 
 /**
  * Memoised because the progress bar re-renders the player several times a
@@ -29,8 +40,10 @@ const MESSAGES: Record<SpotifyPlaylistStatus, string> = {
 const PlaylistPanelComponent = ({
   status,
   playlist,
+  errorStatus,
   currentTrackUri,
   onSelectTrack,
+  onReload,
 }: PlaylistPanelProps) => {
   const currentTrackRef = useRef<HTMLLIElement>(null)
 
@@ -46,7 +59,17 @@ const PlaylistPanelComponent = ({
         {playlist && <span className={styles.count}>{playlist.tracks.length} tracks</span>}
       </div>
       {status !== 'ready' || !playlist ? (
-        <p className={styles.message}>{MESSAGES[status]}</p>
+        <div className={styles.notice}>
+          <p className={styles.message}>
+            {MESSAGES[status]}
+            {errorStatus !== undefined && ` (HTTP ${errorStatus})`}
+          </p>
+          {FAILED_STATUSES.includes(status) && (
+            <button type="button" className={styles.retry} onClick={onReload}>
+              Try again
+            </button>
+          )}
+        </div>
       ) : (
         <ol className={styles.tracks}>
           {playlist.tracks.map((track, index) => {

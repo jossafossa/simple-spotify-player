@@ -17,11 +17,24 @@ type PlayerProps = {
 const SEEK_STEP_MS = 5_000
 
 export const Player = ({ accessToken, onLogout }: PlayerProps) => {
-  const { status, playbackState, togglePlay, nextTrack, previousTrack, seek, playTrack } =
-    useSpotifyPlayer(accessToken)
+  const {
+    status,
+    playbackState,
+    togglePlay,
+    nextTrack,
+    previousTrack,
+    seek,
+    playTrack,
+    playbackErrorMessage,
+  } = useSpotifyPlayer(accessToken)
   const positionMs = useTickingPosition(playbackState)
   const contextUri = playbackState?.contextUri
-  const { status: playlistStatus, playlist } = useSpotifyPlaylist(accessToken, contextUri)
+  const {
+    status: playlistStatus,
+    playlist,
+    errorStatus: playlistErrorStatus,
+    reload: reloadPlaylist,
+  } = useSpotifyPlaylist(accessToken, contextUri)
 
   const seekBy = (deltaMs: number) => {
     if (!playbackState) {
@@ -119,6 +132,12 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
         {status === 'offline' && (
           <p className={styles.message}>This device went offline — reconnecting…</p>
         )}
+        {playbackErrorMessage && (
+          <p className={styles.playbackError}>
+            Spotify could not play this track: {playbackErrorMessage} In Firefox, check
+            Settings → General → DRM content → "Play DRM-controlled content".
+          </p>
+        )}
         <p className={styles.hint}>
           Space to play/pause · ← → to seek · N next · P previous
         </p>
@@ -127,8 +146,10 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
       <PlaylistPanel
         status={playlistStatus}
         playlist={playlist}
+        errorStatus={playlistErrorStatus}
         currentTrackUri={playbackState.track.uri}
         onSelectTrack={handleSelectTrack}
+        onReload={reloadPlaylist}
       />
     </div>
   )

@@ -21,6 +21,8 @@ describe('PlaylistPanel', () => {
         playlist={undefined}
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
+        errorStatus={undefined}
+        onReload={vi.fn()}
       />,
     )
 
@@ -34,6 +36,8 @@ describe('PlaylistPanel', () => {
         playlist={undefined}
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
+        errorStatus={undefined}
+        onReload={vi.fn()}
       />,
     )
 
@@ -47,6 +51,8 @@ describe('PlaylistPanel', () => {
         playlist={undefined}
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
+        errorStatus={undefined}
+        onReload={vi.fn()}
       />,
     )
 
@@ -60,6 +66,8 @@ describe('PlaylistPanel', () => {
         playlist={buildPlaylist()}
         currentTrackUri="spotify:track:2"
         onSelectTrack={vi.fn()}
+        errorStatus={undefined}
+        onReload={vi.fn()}
       />,
     )
 
@@ -77,6 +85,8 @@ describe('PlaylistPanel', () => {
         playlist={buildPlaylist()}
         currentTrackUri="spotify:track:2"
         onSelectTrack={vi.fn()}
+        errorStatus={undefined}
+        onReload={vi.fn()}
       />,
     )
 
@@ -94,6 +104,8 @@ describe('PlaylistPanel', () => {
         playlist={buildPlaylist()}
         currentTrackUri="spotify:track:1"
         onSelectTrack={handleSelectTrack}
+        errorStatus={undefined}
+        onReload={vi.fn()}
       />,
     )
 
@@ -109,6 +121,8 @@ describe('PlaylistPanel', () => {
         playlist={buildPlaylist()}
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
+        errorStatus={undefined}
+        onReload={vi.fn()}
       />,
     )
 
@@ -122,10 +136,12 @@ describe('PlaylistPanel', () => {
         playlist={undefined}
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
+        errorStatus={undefined}
+        onReload={vi.fn()}
       />,
     )
 
-    expect(screen.getByText(/Log out and back in/)).toBeInTheDocument()
+    expect(screen.getByText(/log out and back in/)).toBeInTheDocument()
   })
 
   it('explains that Spotify hides its own generated playlists', () => {
@@ -135,10 +151,32 @@ describe('PlaylistPanel', () => {
         playlist={undefined}
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
+        errorStatus={undefined}
+        onReload={vi.fn()}
       />,
     )
 
-    expect(screen.getByText(/does not let apps read its own generated playlists/)).toBeInTheDocument()
+    expect(screen.getByText(/hides its own generated playlists/)).toBeInTheDocument()
+  })
+
+  it('names the HTTP status and offers a retry on failure', async () => {
+    const handleReload = vi.fn()
+    const user = userEvent.setup()
+
+    render(
+      <PlaylistPanel
+        status="forbidden"
+        playlist={undefined}
+        errorStatus={403}
+        currentTrackUri={undefined}
+        onSelectTrack={vi.fn()}
+        onReload={handleReload}
+      />,
+    )
+
+    expect(screen.getByText(/HTTP 403/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(handleReload).toHaveBeenCalledOnce()
   })
 
   it('drops focus from a clicked row so keyboard controls keep working', async () => {
@@ -150,6 +188,8 @@ describe('PlaylistPanel', () => {
         playlist={buildPlaylist()}
         currentTrackUri="spotify:track:1"
         onSelectTrack={vi.fn()}
+        errorStatus={undefined}
+        onReload={vi.fn()}
       />,
     )
 

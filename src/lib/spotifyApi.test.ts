@@ -171,7 +171,7 @@ describe('fetchContextPlaylist', () => {
       fetchContextPlaylist('token', { type: 'playlist', id: 'p1' }),
     ).rejects.toThrow(SpotifyRequestError)
     await expect(fetchContextPlaylist('token', { type: 'playlist', id: 'p1' })).rejects.toMatchObject(
-      { status: 403 },
+      { status: 403, path: expect.stringContaining('/playlists/p1') },
     )
   })
 })

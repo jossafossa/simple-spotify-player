@@ -14,7 +14,12 @@ vi.mock('~/hooks/useKeyboardControls', () => ({
   useKeyboardControls: vi.fn(),
 }))
 vi.mock('~/hooks/useSpotifyPlaylist', () => ({
-  useSpotifyPlaylist: vi.fn(() => ({ status: 'empty', playlist: undefined })),
+  useSpotifyPlaylist: vi.fn(() => ({
+    status: 'empty',
+    playlist: undefined,
+    errorStatus: undefined,
+    reload: vi.fn(),
+  })),
 }))
 
 const mockedUseSpotifyPlayer = vi.mocked(useSpotifyPlayer)
@@ -51,6 +56,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      playbackErrorMessage: undefined,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -67,6 +73,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      playbackErrorMessage: undefined,
     })
     const handleLogout = vi.fn()
     const user = userEvent.setup()
@@ -87,6 +94,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      playbackErrorMessage: undefined,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -106,6 +114,7 @@ describe('Player', () => {
       previousTrack,
       seek: vi.fn(),
       playTrack: vi.fn(),
+      playbackErrorMessage: undefined,
     })
     const user = userEvent.setup()
 
@@ -128,6 +137,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek,
       playTrack: vi.fn(),
+      playbackErrorMessage: undefined,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -150,6 +160,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack,
+      playbackErrorMessage: undefined,
     })
     mockedUseSpotifyPlaylist.mockReturnValue({
       status: 'ready',
@@ -164,6 +175,8 @@ describe('Player', () => {
           },
         ],
       },
+      errorStatus: undefined,
+      reload: vi.fn(),
     })
     const user = userEvent.setup()
 
@@ -172,6 +185,24 @@ describe('Player', () => {
     await user.click(screen.getByText('Other Song'))
 
     expect(playTrack).toHaveBeenCalledWith('spotify:playlist:p1', 'spotify:track:other')
+  })
+
+  it('surfaces an SDK playback error with the Firefox DRM hint', () => {
+    mockedUseSpotifyPlayer.mockReturnValue({
+      status: 'ready',
+      playbackState: buildPlaybackState(),
+      togglePlay: vi.fn(),
+      nextTrack: vi.fn(),
+      previousTrack: vi.fn(),
+      seek: vi.fn(),
+      playTrack: vi.fn(),
+      playbackErrorMessage: 'Playback of protected content is not enabled.',
+    })
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    expect(screen.getByText(/Playback of protected content is not enabled/)).toBeInTheDocument()
+    expect(screen.getByText(/DRM content/)).toBeInTheDocument()
   })
 
   it('loads the playlist for whatever context is playing', () => {
@@ -183,8 +214,14 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      playbackErrorMessage: undefined,
     })
-    mockedUseSpotifyPlaylist.mockReturnValue({ status: 'loading', playlist: undefined })
+    mockedUseSpotifyPlaylist.mockReturnValue({
+      status: 'loading',
+      playlist: undefined,
+      errorStatus: undefined,
+      reload: vi.fn(),
+    })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
 

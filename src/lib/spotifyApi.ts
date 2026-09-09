@@ -17,11 +17,13 @@ export type SpotifyContext = {
 
 export class SpotifyRequestError extends Error {
   status: number
+  path: string
 
-  constructor(status: number) {
-    super(`Spotify request failed with status ${status}`)
+  constructor(status: number, path: string) {
+    super(`Spotify request to ${path} failed with status ${status}`)
     this.name = 'SpotifyRequestError'
     this.status = status
+    this.path = path
   }
 }
 
@@ -45,7 +47,7 @@ const request = async <T>(accessToken: string, path: string, init: RequestInit =
   })
 
   if (!response.ok) {
-    throw new SpotifyRequestError(response.status)
+    throw new SpotifyRequestError(response.status, path)
   }
 
   // Playback commands answer 202/204 with an empty body.

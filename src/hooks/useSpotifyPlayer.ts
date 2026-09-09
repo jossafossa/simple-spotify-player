@@ -14,6 +14,8 @@ export type UseSpotifyPlayerResult = {
   previousTrack: () => void
   seek: (positionMs: number) => void
   playTrack: (contextUri: string, trackUri: string) => void
+  /** What the SDK last refused to play, if anything. */
+  playbackErrorMessage: string | undefined
 }
 
 const PLAYER_NAME = 'Spotify Player (web)'
@@ -30,6 +32,7 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     'connecting',
   )
   const [playbackState, setPlaybackState] = useState<PlaybackState>()
+  const [playbackErrorMessage, setPlaybackErrorMessage] = useState<string>()
   const playerRef = useRef<Spotify.Player | undefined>(undefined)
   const deviceIdRef = useRef<string | undefined>(undefined)
   const isActivatedRef = useRef(false)
@@ -40,6 +43,7 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     setPrevAccessToken(accessToken)
     setConnectionStatus('connecting')
     setPlaybackState(undefined)
+    setPlaybackErrorMessage(undefined)
   }
 
   const status: SpotifyPlayerStatus = !accessToken ? 'idle' : connectionStatus
@@ -83,12 +87,20 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
           setConnectionStatus('offline')
         }
       })
+      // Firefox fails here rather than at connect time when DRM playback is
+      // switched off, which otherwise looks like silence with a ticking bar.
+      player.addListener('playback_error', ({ message }) => {
+        if (!isCancelled) {
+          setPlaybackErrorMessage(message)
+        }
+      })
       player.addListener('initialization_error', handleError)
       player.addListener('authentication_error', handleError)
       player.addListener('account_error', handleError)
       player.addListener('player_state_changed', (state) => {
         if (!isCancelled && state) {
           setPlaybackState(mapSdkStateToPlaybackState(state))
+          setPlaybackErrorMessage(undefined)
         }
       })
 
@@ -179,5 +191,14 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     [accessToken, activate],
   )
 
-  return { status, playbackState, togglePlay, nextTrack, previousTrack, seek, playTrack }
+  return {
+    status,
+    playbackState,
+    togglePlay,
+    nextTrack,
+    previousTrack,
+    seek,
+    playTrack,
+    playbackErrorMessage,
+  }
 }
