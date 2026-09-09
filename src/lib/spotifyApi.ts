@@ -2,8 +2,7 @@ import type { Playlist, PlaylistTrack } from './types'
 
 const API_BASE = 'https://api.spotify.com/v1'
 /** Both listing endpoints cap a page at 50 items. */
-const PLAYLIST_PAGE_SIZE = 50
-const ALBUM_PAGE_SIZE = 50
+const PAGE_SIZE = 50
 /** Pages are fetched in batches this wide to stay clear of rate limiting. */
 const PAGE_BATCH_SIZE = 5
 
@@ -78,23 +77,21 @@ const request = async <T>(accessToken: string, path: string, init: RequestInit =
 }
 
 type ApiTrack = {
+  id?: string | null
   uri?: string | null
   name?: string | null
   duration_ms?: number | null
   artists?: { name: string }[] | null
+  album?: { name?: string | null; images?: { url: string }[] | null } | null
 }
 
-/**
- * The February 2026 API renamed the playlist listing's `track` field to
- * `item`; both are accepted so a rollback either way keeps working.
- */
+/** The February 2026 API renamed the listing's `track` field to `item`. */
 type ApiPlaylistItem = {
   item?: ApiTrack | null
-  track?: ApiTrack | null
 }
 
 type Page<TItem> = {
-  items: TItem[] | null
+  items?: TItem[] | null
   total?: number | null
 }
 
@@ -113,42 +110,40 @@ const toPlaylistTrack = (track: ApiTrack | null | undefined): PlaylistTrack | un
   }
 }
 
-const collectTracks = <TItem>(
-  items: (TItem[] | null | undefined)[],
+const collectPage = <TItem>(
+  page: Page<TItem>,
   toTrack: (item: TItem) => PlaylistTrack | undefined,
-): PlaylistTrack[] => {
-  const tracks: PlaylistTrack[] = []
+  into: PlaylistTrack[],
+): void => {
+  for (const item of page.items ?? []) {
+    const track = toTrack(item)
 
-  for (const page of items) {
-    for (const item of page ?? []) {
-      const track = toTrack(item)
-
-      if (track) {
-        tracks.push(track)
-      }
+    if (track) {
+      into.push(track)
     }
   }
-
-  return tracks
 }
 
 /**
  * Reads every page of a track listing. The first page reports the total, so
  * the remaining offsets are known up front and can be fetched in batches
- * rather than one round trip at a time.
+ * rather than one round trip at a time. Callers that already hold the first
+ * page — an album response embeds it — pass it in rather than asking twice.
  */
 const fetchAllTracks = async <TItem>(
   accessToken: string,
   buildPath: (offset: number) => string,
-  pageSize: number,
   toTrack: (item: TItem) => PlaylistTrack | undefined,
+  embeddedFirstPage?: Page<TItem>,
 ): Promise<PlaylistTrack[]> => {
-  const firstPage = await request<Page<TItem>>(accessToken, buildPath(0))
+  const firstPage =
+    embeddedFirstPage ?? (await request<Page<TItem>>(accessToken, buildPath(0)))
   const total = firstPage.total ?? firstPage.items?.length ?? 0
-  const pages: (TItem[] | null | undefined)[] = [firstPage.items]
+  const tracks: PlaylistTrack[] = []
+  collectPage(firstPage, toTrack, tracks)
 
   const offsets: number[] = []
-  for (let offset = pageSize; offset < total; offset += pageSize) {
+  for (let offset = PAGE_SIZE; offset < total; offset += PAGE_SIZE) {
     offsets.push(offset)
   }
 
@@ -158,10 +153,12 @@ const fetchAllTracks = async <TItem>(
       batch.map((offset) => request<Page<TItem>>(accessToken, buildPath(offset))),
     )
 
-    pages.push(...batchPages.map((page) => page.items))
+    for (const page of batchPages) {
+      collectPage(page, toTrack, tracks)
+    }
   }
 
-  return collectTracks(pages, toTrack)
+  return tracks
 }
 
 const fetchPlaylistContext = async (accessToken: string, playlistId: string): Promise<Playlist> => {
@@ -172,10 +169,9 @@ const fetchPlaylistContext = async (accessToken: string, playlistId: string): Pr
     fetchAllTracks<ApiPlaylistItem>(
       accessToken,
       (offset) =>
-        `/playlists/${playlistId}/items?limit=${PLAYLIST_PAGE_SIZE}&offset=${offset}` +
+        `/playlists/${playlistId}/items?limit=${PAGE_SIZE}&offset=${offset}` +
         '&fields=total,items(item(uri,name,duration_ms,artists(name)))',
-      PLAYLIST_PAGE_SIZE,
-      (entry) => toPlaylistTrack(entry.item ?? entry.track),
+      (entry) => toPlaylistTrack(entry.item),
     ),
   ])
 
@@ -183,17 +179,21 @@ const fetchPlaylistContext = async (accessToken: string, playlistId: string): Pr
 }
 
 const fetchAlbumContext = async (accessToken: string, albumId: string): Promise<Playlist> => {
-  const [details, tracks] = await Promise.all([
-    request<{ name?: string | null }>(accessToken, `/albums/${albumId}`),
-    fetchAllTracks<ApiTrack>(
-      accessToken,
-      (offset) => `/albums/${albumId}/tracks?limit=${ALBUM_PAGE_SIZE}&offset=${offset}`,
-      ALBUM_PAGE_SIZE,
-      toPlaylistTrack,
-    ),
-  ])
+  // The album object carries its first page of tracks, so asking the tracks
+  // endpoint for offset 0 as well would fetch the same 50 items twice.
+  const album = await request<{ name?: string | null; tracks?: Page<ApiTrack> | null }>(
+    accessToken,
+    `/albums/${albumId}`,
+  )
 
-  return { name: details.name ?? 'Album', tracks }
+  const tracks = await fetchAllTracks<ApiTrack>(
+    accessToken,
+    (offset) => `/albums/${albumId}/tracks?limit=${PAGE_SIZE}&offset=${offset}`,
+    toPlaylistTrack,
+    album.tracks ?? undefined,
+  )
+
+  return { name: album.name ?? 'Album', tracks }
 }
 
 export const fetchContextPlaylist = async (
@@ -235,21 +235,12 @@ export const playTrackInContext = async ({
   })
 }
 
-export type ApiTrackItem = {
-  id?: string | null
-  uri?: string | null
-  name?: string | null
-  duration_ms?: number | null
-  artists?: { name: string }[] | null
-  album?: { name?: string | null; images?: { url: string }[] | null } | null
-}
-
 export type ApiPlaybackState = {
   is_playing?: boolean | null
   progress_ms?: number | null
   context?: { uri?: string | null } | null
   device?: SpotifyDevice | null
-  item?: ApiTrackItem | null
+  item?: ApiTrack | null
 }
 
 export type SpotifyDevice = {
@@ -274,28 +265,22 @@ export const fetchDevices = async (accessToken: string): Promise<SpotifyDevice[]
   return response.devices ?? []
 }
 
-export const resumePlayback = (accessToken: string, deviceId?: string): Promise<void> =>
-  request(accessToken, `/me/player/play${deviceQuery(deviceId)}`, { method: 'PUT' })
+export const resumePlayback = (accessToken: string): Promise<void> =>
+  request(accessToken, '/me/player/play', { method: 'PUT' })
 
-export const pausePlayback = (accessToken: string, deviceId?: string): Promise<void> =>
-  request(accessToken, `/me/player/pause${deviceQuery(deviceId)}`, { method: 'PUT' })
+export const pausePlayback = (accessToken: string): Promise<void> =>
+  request(accessToken, '/me/player/pause', { method: 'PUT' })
 
-export const skipToNext = (accessToken: string, deviceId?: string): Promise<void> =>
-  request(accessToken, `/me/player/next${deviceQuery(deviceId)}`, { method: 'POST' })
+export const skipToNext = (accessToken: string): Promise<void> =>
+  request(accessToken, '/me/player/next', { method: 'POST' })
 
-export const skipToPrevious = (accessToken: string, deviceId?: string): Promise<void> =>
-  request(accessToken, `/me/player/previous${deviceQuery(deviceId)}`, { method: 'POST' })
+export const skipToPrevious = (accessToken: string): Promise<void> =>
+  request(accessToken, '/me/player/previous', { method: 'POST' })
 
-export const seekToPosition = (
-  accessToken: string,
-  positionMs: number,
-  deviceId?: string,
-): Promise<void> => {
-  const device = deviceId ? `&device_id=${encodeURIComponent(deviceId)}` : ''
-  return request(accessToken, `/me/player/seek?position_ms=${Math.round(positionMs)}${device}`, {
+export const seekToPosition = (accessToken: string, positionMs: number): Promise<void> =>
+  request(accessToken, `/me/player/seek?position_ms=${Math.round(positionMs)}`, {
     method: 'PUT',
   })
-}
 
 /** Moves playback to another device, keeping whatever is playing. */
 export const transferPlayback = (accessToken: string, deviceId: string): Promise<void> =>

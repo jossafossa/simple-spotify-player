@@ -1,14 +1,22 @@
+@use '../theme' as t;
+
+/**
+ * The companion column: same surface and hairline as the card, but no ochre
+ * masthead — the accent is spent here on the row that is playing.
+ */
 .panel {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  gap: 12px;
-  padding: 24px;
-  border-radius: 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  gap: t.$s-4;
+  padding: t.$s-6 t.$s-5;
+  border: 1px solid t.$rule;
+  border-top: 2px solid t.$rule-strong;
+  border-radius: t.$radius;
+  background: t.$ink-surface;
+  font-family: t.$sans;
   text-align: left;
 }
 
@@ -16,61 +24,66 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: t.$s-3;
+  padding-bottom: t.$s-3;
+  border-bottom: 1px solid t.$rule;
 }
 
-.count {
-  flex: 0 0 auto;
-  font-size: 11px;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
+/** Serif, like a chapter title. */
 .title {
+  @include t.display(t.$fs-title);
+
   margin: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 14px;
-  font-weight: 700;
-  text-transform: uppercase;
+  color: t.$text;
+}
+
+.count {
+  @include t.numerals;
+
+  flex: 0 0 auto;
+  font-size: t.$fs-micro;
   letter-spacing: 0.08em;
-  color: var(--color-text-muted);
+  text-transform: uppercase;
+  color: t.$text-faint;
 }
 
 .notice {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
-}
-
-.reason {
-  margin: 0;
-  font-size: 12px;
-  font-style: italic;
-  color: var(--color-text);
-}
-
-.retry {
-  padding: 6px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface-raised);
-  font-size: 12px;
-  cursor: pointer;
-
-  &:hover {
-    border-color: var(--color-text-muted);
-  }
+  gap: t.$s-3;
 }
 
 .message {
   margin: 0;
-  font-size: 13px;
-  color: var(--color-text-muted);
+  font-size: t.$fs-small;
+  line-height: t.$lh-body;
+  color: t.$text-muted;
 }
 
+/** Spotify's own words, set as a pull quote. */
+.reason {
+  margin: 0;
+  padding-left: t.$s-3;
+  border-left: 2px solid t.$rule-strong;
+  font-family: t.$serif;
+  font-size: t.$fs-body;
+  font-style: italic;
+  line-height: t.$lh-snug;
+  color: t.$text;
+}
+
+.retry {
+  @include t.button-ghost;
+}
+
+/**
+ * Kept as flex: 1 / min-height: 0 / overflow-y: auto so a long list scrolls
+ * inside the panel instead of stretching the row past the player card.
+ */
 .tracks {
   flex: 1;
   // Without this a flex child refuses to shrink below its content height,
@@ -81,40 +94,72 @@
   list-style: none;
   overflow-y: auto;
   // Keep the scrollbar off the track rows' hover background.
-  margin-right: -8px;
-  padding-right: 8px;
+  margin-right: -#{t.$s-2};
+  padding-right: t.$s-2;
+
+  // A hairline between rows, not a card around each one.
+  > li + li {
+    border-top: 1px solid t.$rule-faint;
+  }
 }
 
 .track {
+  @include t.button-base;
+
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px;
-  border: none;
-  border-radius: 6px;
+  gap: t.$s-3;
+  padding: t.$s-2 t.$s-2 t.$s-2 t.$s-1;
+  border: 0;
+  border-radius: 0;
   background: transparent;
+  // A gutter the active marker fills, so marking a row shifts nothing.
+  box-shadow: inset 2px 0 0 transparent;
   text-align: left;
-  cursor: pointer;
+  transition:
+    background-color 120ms linear,
+    box-shadow 120ms linear;
+
+  &:focus-visible {
+    outline-offset: -2px;
+  }
 
   &:hover {
-    background: var(--color-surface-raised);
+    background: t.$ink-hover;
+
+    .trackName {
+      color: t.$text;
+    }
+
+    .index {
+      color: t.$text-muted;
+    }
   }
 
   &[aria-current] {
+    background: t.$accent-wash;
+    box-shadow: inset 2px 0 0 t.$accent;
+
+    &:hover {
+      background: t.$accent-wash-strong;
+    }
+
     .index,
     .trackName,
     .duration {
-      color: var(--color-accent);
+      color: t.$accent;
     }
   }
 }
 
 .index {
-  flex: 0 0 20px;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-muted);
+  @include t.numerals;
+
+  flex: 0 0 22px;
+  font-size: t.$fs-fine;
+  text-align: right;
+  color: t.$text-faint;
 }
 
 .trackText {
@@ -122,6 +167,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 1px;
 }
 
 .trackName,
@@ -132,17 +178,22 @@
 }
 
 .trackName {
-  font-size: 13px;
+  font-family: t.$serif;
+  font-size: t.$fs-body;
+  line-height: t.$lh-snug;
+  color: t.$text;
 }
 
 .artistNames {
-  font-size: 11px;
-  color: var(--color-text-muted);
+  font-size: t.$fs-fine;
+  line-height: 1.4;
+  color: t.$text-muted;
 }
 
 .duration {
+  @include t.numerals;
+
   flex: 0 0 auto;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-text-muted);
+  font-size: t.$fs-fine;
+  color: t.$text-faint;
 }

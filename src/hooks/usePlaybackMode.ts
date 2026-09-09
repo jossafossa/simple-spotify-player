@@ -7,7 +7,7 @@ import {
 import {
   readLocalPlaybackFailed,
   readStoredPlaybackMode,
-  saveLocalPlaybackFailed,
+  saveLocalPlaybackCapability,
   saveStoredPlaybackMode,
 } from '~/lib/playbackModeStorage'
 
@@ -15,17 +15,16 @@ export type UsePlaybackModeResult = {
   /** Undefined only while Widevine support is still being detected. */
   mode: PlaybackMode | undefined
   setMode: (mode: PlaybackMode) => void
-  /** Records that playing in the page stalled, moving this device's default. */
+  /** Records that playing in the page failed, moving this device's default. */
   reportLocalPlaybackFailure: () => void
 }
 
 export const usePlaybackMode = (): UsePlaybackModeResult => {
-  const [storedMode, setStoredMode] = useState(readStoredPlaybackMode)
-  const [detectedMode, setDetectedMode] = useState<PlaybackMode>()
+  const [mode, setResolvedMode] = useState(readStoredPlaybackMode)
 
   useEffect(() => {
-    // An explicit choice wins, so detection is only worth running without one.
-    if (storedMode) {
+    // An explicit choice is already in hand, so there is nothing to detect.
+    if (mode) {
       return
     }
 
@@ -33,7 +32,7 @@ export const usePlaybackMode = (): UsePlaybackModeResult => {
 
     detectWidevineSupport().then((isWidevineSupported) => {
       if (!isCancelled) {
-        setDetectedMode(
+        setResolvedMode(
           resolveDefaultPlaybackMode({
             isWidevineSupported,
             hasLocalPlaybackFailed: readLocalPlaybackFailed(),
@@ -45,16 +44,16 @@ export const usePlaybackMode = (): UsePlaybackModeResult => {
     return () => {
       isCancelled = true
     }
-  }, [storedMode])
+  }, [mode])
 
-  const setMode = useCallback((mode: PlaybackMode) => {
-    saveStoredPlaybackMode(mode)
-    setStoredMode(mode)
+  const setMode = useCallback((nextMode: PlaybackMode) => {
+    saveStoredPlaybackMode(nextMode)
+    setResolvedMode(nextMode)
   }, [])
 
   const reportLocalPlaybackFailure = useCallback(() => {
-    saveLocalPlaybackFailed()
+    saveLocalPlaybackCapability(false)
   }, [])
 
-  return { mode: storedMode ?? detectedMode, setMode, reportLocalPlaybackFailure }
+  return { mode, setMode, reportLocalPlaybackFailure }
 }

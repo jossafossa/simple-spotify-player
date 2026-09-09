@@ -1,7 +1,7 @@
 import type { PlaybackMode } from './playbackMode'
 
 const MODE_KEY = 'spotify-player:playback-mode'
-const LOCAL_FAILED_KEY = 'spotify-player:local-playback-failed'
+const LOCAL_CAPABILITY_KEY = 'spotify-player:local-playback-capable'
 
 const isPlaybackMode = (value: string | null): value is PlaybackMode =>
   value === 'local' || value === 'remote'
@@ -25,21 +25,23 @@ export const saveStoredPlaybackMode = (mode: PlaybackMode): void => {
 }
 
 /**
- * Set when playing in the page stalled, which is how an unlicensed Widevine
- * build shows itself. It only moves the default; an explicit choice still wins.
+ * What happened last time this browser asked Spotify for a DRM licence, which
+ * is how an unlicensed Widevine build gives itself away. Recorded on refusal
+ * *and* on success, so a browser that once failed is not written off for good.
+ * It only moves the default; an explicit choice still wins.
  */
 export const readLocalPlaybackFailed = (): boolean => {
   try {
-    return localStorage.getItem(LOCAL_FAILED_KEY) === 'true'
+    return localStorage.getItem(LOCAL_CAPABILITY_KEY) === 'false'
   } catch {
     return false
   }
 }
 
-export const saveLocalPlaybackFailed = (): void => {
+export const saveLocalPlaybackCapability = (isPlayable: boolean): void => {
   try {
-    localStorage.setItem(LOCAL_FAILED_KEY, 'true')
+    localStorage.setItem(LOCAL_CAPABILITY_KEY, String(isPlayable))
   } catch {
-    // Not remembering the failure only means detecting it again next time.
+    // Not remembering it only means working it out again next time.
   }
 }

@@ -1,31 +1,48 @@
+@use '../theme' as t;
+
+/** Caption and field on one ruled line, like a form in a technical manual. */
 .wrapper {
-  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: t.$s-3;
+  width: 100%;
+  padding-top: t.$s-3;
+  border-top: 1px solid t.$rule-faint;
 }
 
 .label {
-  font-size: 12px;
-  color: var(--color-text-muted);
+  @include t.micro-label;
+
+  flex: 0 0 auto;
+  color: t.$text-faint;
 }
 
 .select {
   flex: 1;
   min-width: 0;
-  max-width: 200px;
-  padding: 6px 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-surface-raised);
-  color: inherit;
-  font: inherit;
-  font-size: 12px;
+  max-width: 220px;
+  padding: t.$s-2 t.$s-2;
+  border: 1px solid t.$rule;
+  border-radius: t.$radius-sm;
+  background: t.$ink-well;
+  color: t.$text;
+  font-family: t.$sans;
+  font-size: t.$fs-small;
+  cursor: pointer;
+
+  @include t.focus-ring(1px);
+
+  &:hover {
+    border-color: t.$rule-strong;
+  }
 }
 
 .empty {
   margin: 0;
-  font-size: 12px;
-  color: var(--color-text-muted);
+  padding-top: t.$s-3;
+  border-top: 1px solid t.$rule-faint;
+  font-size: t.$fs-small;
+  line-height: t.$lh-body;
+  color: t.$text-muted;
 }

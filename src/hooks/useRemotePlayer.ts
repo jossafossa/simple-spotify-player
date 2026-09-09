@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { mapApiStateToPlaybackState } from '~/lib/mapApiStateToPlaybackState'
 import {
   fetchDevices,
@@ -12,7 +12,7 @@ import {
   transferPlayback,
   type SpotifyDevice,
 } from '~/lib/spotifyApi'
-import type { PlaybackState } from '~/lib/types'
+import type { PlaybackState, PlayerControls } from '~/lib/types'
 
 export type RemotePlayerStatus = 'idle' | 'connecting' | 'ready' | 'no-device' | 'error'
 
@@ -22,14 +22,8 @@ export type RemoteDevice = {
   isActive: boolean
 }
 
-export type UseRemotePlayerResult = {
+export type UseRemotePlayerResult = PlayerControls & {
   status: RemotePlayerStatus
-  playbackState: PlaybackState | undefined
-  togglePlay: () => void
-  nextTrack: () => void
-  previousTrack: () => void
-  seek: (positionMs: number) => void
-  playTrack: (contextUri: string, trackUri: string) => void
   devices: RemoteDevice[]
   activeDeviceName: string | undefined
   selectDevice: (deviceId: string) => void
@@ -37,11 +31,35 @@ export type UseRemotePlayerResult = {
 
 /** Nothing pushes state when controlling another device, so it is polled. */
 const POLL_INTERVAL_MS = 3_000
+/**
+ * Devices wake and sleep on the order of minutes, so polling them as often as
+ * the playback position would double the request volume for nothing.
+ */
+const DEVICE_POLL_INTERVAL_MS = 20_000
 /** Spotify needs a moment to apply a command before it reports the result. */
 const COMMAND_SETTLE_MS = 400
 
-const toRemoteDevice = (device: SpotifyDevice): RemoteDevice | undefined =>
-  device.id ? { id: device.id, name: device.name ?? 'Unknown device', isActive: !!device.is_active } : undefined
+const toRemoteDevice = (device: SpotifyDevice): RemoteDevice[] =>
+  device.id
+    ? [{ id: device.id, name: device.name ?? 'Unknown device', isActive: !!device.is_active }]
+    : []
+
+const isSameTrack = (a: PlaybackState | undefined, b: PlaybackState) =>
+  a?.track.uri === b.track.uri &&
+  a?.positionMs === b.positionMs &&
+  a?.isPaused === b.isPaused &&
+  a?.contextUri === b.contextUri
+
+const isSameDevices = (a: RemoteDevice[], b: RemoteDevice[]) =>
+  a.length === b.length &&
+  a.every((device, index) => {
+    const other = b[index]
+    return (
+      device.id === other?.id &&
+      device.name === other.name &&
+      device.isActive === other.isActive
+    )
+  })
 
 export const useRemotePlayer = (accessToken: string | undefined): UseRemotePlayerResult => {
   const [prevAccessToken, setPrevAccessToken] = useState(accessToken)
@@ -49,7 +67,9 @@ export const useRemotePlayer = (accessToken: string | undefined): UseRemotePlaye
   const [playbackState, setPlaybackState] = useState<PlaybackState>()
   const [devices, setDevices] = useState<RemoteDevice[]>([])
   const [activeDeviceName, setActiveDeviceName] = useState<string>()
-  const refreshRef = useRef<(() => void) | undefined>(undefined)
+  // Bumped to re-run the poll effect, which is also what re-arms its timer —
+  // so a refresh after a command replaces the next tick instead of adding one.
+  const [refreshKey, setRefreshKey] = useState(0)
 
   if (accessToken !== prevAccessToken) {
     setPrevAccessToken(accessToken)
@@ -67,18 +87,18 @@ export const useRemotePlayer = (accessToken: string | undefined): UseRemotePlaye
     let isCancelled = false
 
     const refresh = () => {
-      Promise.all([fetchPlaybackState(accessToken), fetchDevices(accessToken)])
-        .then(([state, deviceList]) => {
+      fetchPlaybackState(accessToken)
+        .then((state) => {
           if (isCancelled) {
             return
           }
 
-          const remoteDevices = deviceList
-            .map(toRemoteDevice)
-            .filter((device): device is RemoteDevice => !!device)
-
-          setDevices(remoteDevices)
-          setPlaybackState(mapApiStateToPlaybackState(state))
+          const current = mapApiStateToPlaybackState(state)
+          // Reusing the previous object when nothing moved keeps React from
+          // re-rendering, and keeps the progress bar's interval alive.
+          setPlaybackState((previous) =>
+            current && isSameTrack(previous, current) ? previous : current,
+          )
           setActiveDeviceName(state?.device?.name ?? undefined)
           // A device has to be awake and selected before it can be driven.
           setStatus(state?.device?.id ? 'ready' : 'no-device')
@@ -91,16 +111,47 @@ export const useRemotePlayer = (accessToken: string | undefined): UseRemotePlaye
         })
     }
 
-    refreshRef.current = refresh
     refresh()
     const intervalId = setInterval(refresh, POLL_INTERVAL_MS)
 
     return () => {
       isCancelled = true
       clearInterval(intervalId)
-      refreshRef.current = undefined
     }
-  }, [accessToken])
+  }, [accessToken, refreshKey])
+
+  useEffect(() => {
+    if (!accessToken) {
+      return
+    }
+
+    let isCancelled = false
+
+    const refreshDevices = () => {
+      fetchDevices(accessToken)
+        .then((deviceList) => {
+          if (isCancelled) {
+            return
+          }
+
+          const next = deviceList.flatMap(toRemoteDevice)
+          setDevices((previous) => (isSameDevices(previous, next) ? previous : next))
+        })
+        .catch((error: unknown) => {
+          if (!isCancelled) {
+            console.error('Could not list Spotify devices', error)
+          }
+        })
+    }
+
+    refreshDevices()
+    const intervalId = setInterval(refreshDevices, DEVICE_POLL_INTERVAL_MS)
+
+    return () => {
+      isCancelled = true
+      clearInterval(intervalId)
+    }
+  }, [accessToken, refreshKey])
 
   /** Runs a command, then re-reads state so the UI follows the real device. */
   const runCommand = useCallback(
@@ -109,13 +160,15 @@ export const useRemotePlayer = (accessToken: string | undefined): UseRemotePlaye
         return
       }
 
+      const scheduleRefresh = (delayMs: number) => {
+        setTimeout(() => setRefreshKey((key) => key + 1), delayMs)
+      }
+
       command(accessToken)
-        .then(() => {
-          setTimeout(() => refreshRef.current?.(), COMMAND_SETTLE_MS)
-        })
+        .then(() => scheduleRefresh(COMMAND_SETTLE_MS))
         .catch((error: unknown) => {
           console.error('Remote playback command failed', error)
-          refreshRef.current?.()
+          scheduleRefresh(0)
         })
     },
     [accessToken],

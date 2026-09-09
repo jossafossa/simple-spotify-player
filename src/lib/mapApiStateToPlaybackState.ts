@@ -1,3 +1,4 @@
+import { toPlaybackTrack } from './toPlaybackTrack'
 import type { ApiPlaybackState } from './spotifyApi'
 import type { PlaybackState } from './types'
 
@@ -16,15 +17,7 @@ export const mapApiStateToPlaybackState = (
   }
 
   return {
-    track: {
-      id: item.id ?? '',
-      uri: item.uri,
-      name: item.name ?? 'Unknown track',
-      artistNames: item.artists?.map((artist) => artist.name) ?? [],
-      albumName: item.album?.name ?? '',
-      albumImageUrl: item.album?.images?.[0]?.url,
-      durationMs: item.duration_ms ?? 0,
-    },
+    track: toPlaybackTrack(item, item.duration_ms ?? 0),
     contextUri: state?.context?.uri ?? undefined,
     positionMs: state?.progress_ms ?? 0,
     isPaused: !state?.is_playing,

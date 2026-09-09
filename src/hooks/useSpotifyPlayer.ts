@@ -2,36 +2,26 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { loadSpotifyPlaybackSdk } from '~/lib/loadSpotifyPlaybackSdk'
 import { mapSdkStateToPlaybackState } from '~/lib/mapSdkStateToPlaybackState'
 import { playTrackInContext, transferPlayback } from '~/lib/spotifyApi'
-import type { PlaybackState } from '~/lib/types'
+import { watchWidevineLicense } from '~/lib/widevineLicense'
+import { saveLocalPlaybackCapability } from '~/lib/playbackModeStorage'
+import type { PlaybackState, PlayerControls } from '~/lib/types'
 
 export type SpotifyPlayerStatus = 'idle' | 'connecting' | 'ready' | 'offline' | 'error'
 
-export type UseSpotifyPlayerResult = {
+export type UseSpotifyPlayerResult = PlayerControls & {
   status: SpotifyPlayerStatus
-  playbackState: PlaybackState | undefined
-  togglePlay: () => void
-  nextTrack: () => void
-  previousTrack: () => void
-  seek: (positionMs: number) => void
-  playTrack: (contextUri: string, trackUri: string) => void
   /** Moves the account's playback onto this browser's SDK device. */
   claimPlayback: () => void
   /** What the SDK last refused to play, if anything. */
   playbackErrorMessage: string | undefined
   /**
-   * True when the SDK claims to be playing but the position is not moving.
-   * A failed DRM licence fetch stalls exactly like this and reports nothing.
+   * True when Spotify refused this browser a DRM licence, which stops playback
+   * a few seconds in without the SDK reporting anything.
    */
-  isStalled: boolean
+  isLicenseRefused: boolean
 }
 
 const PLAYER_NAME = 'Spotify Player (web)'
-
-/**
- * `player_state_changed` only fires on transitions, and stops arriving
- * altogether once the device drops out, so the real state is polled too.
- */
-const STATE_SYNC_INTERVAL_MS = 5_000
 
 export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPlayerResult => {
   const [prevAccessToken, setPrevAccessToken] = useState(accessToken)
@@ -40,8 +30,7 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
   )
   const [playbackState, setPlaybackState] = useState<PlaybackState>()
   const [playbackErrorMessage, setPlaybackErrorMessage] = useState<string>()
-  const [isStalled, setIsStalled] = useState(false)
-  const lastSyncRef = useRef<{ trackUri: string; positionMs: number } | undefined>(undefined)
+  const [isLicenseRefused, setIsLicenseRefused] = useState(false)
   const playerRef = useRef<Spotify.Player | undefined>(undefined)
   const deviceIdRef = useRef<string | undefined>(undefined)
   const isActivatedRef = useRef(false)
@@ -53,10 +42,20 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     setConnectionStatus('connecting')
     setPlaybackState(undefined)
     setPlaybackErrorMessage(undefined)
-    setIsStalled(false)
+    setIsLicenseRefused(false)
   }
 
   const status: SpotifyPlayerStatus = !accessToken ? 'idle' : connectionStatus
+
+  /** Unlocks audio playback if a gesture hasn't already done so. */
+  const activate = useCallback(() => {
+    if (isActivatedRef.current) {
+      return
+    }
+
+    isActivatedRef.current = true
+    void playerRef.current?.activateElement()
+  }, [])
 
   useEffect(() => {
     if (!accessToken) {
@@ -64,8 +63,17 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     }
 
     let isCancelled = false
-    let syncIntervalId: ReturnType<typeof setInterval> | undefined
     let detachActivation: (() => void) | undefined
+
+    // Remembered either way, so a browser that once failed can recover and a
+    // working one is not re-probed from scratch.
+    const unwatchLicense = watchWidevineLicense((isGranted) => {
+      saveLocalPlaybackCapability(isGranted)
+
+      if (!isCancelled) {
+        setIsLicenseRefused(!isGranted)
+      }
+    })
 
     loadSpotifyPlaybackSdk().then(() => {
       if (isCancelled) {
@@ -136,54 +144,18 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
         document.removeEventListener('keydown', activateOnFirstGesture)
       }
 
-      syncIntervalId = setInterval(() => {
-        player.getCurrentState().then((state) => {
-          if (isCancelled || !state) {
-            return
-          }
-
-          const current = mapSdkStateToPlaybackState(state)
-          setPlaybackState(current)
-
-          const previous = lastSyncRef.current
-          lastSyncRef.current = {
-            trackUri: current.track.uri,
-            positionMs: current.positionMs,
-          }
-
-          // Only the same track running twice without advancing counts as a
-          // stall; a track change legitimately rewinds the position to zero.
-          if (current.isPaused || previous?.trackUri !== current.track.uri) {
-            setIsStalled(false)
-            return
-          }
-
-          setIsStalled(current.positionMs <= previous.positionMs)
-        })
-      }, STATE_SYNC_INTERVAL_MS)
     })
 
     return () => {
       isCancelled = true
-      clearInterval(syncIntervalId)
+      unwatchLicense()
       detachActivation?.()
       playerRef.current?.disconnect()
       playerRef.current = undefined
       deviceIdRef.current = undefined
       isActivatedRef.current = false
-      lastSyncRef.current = undefined
     }
-  }, [accessToken])
-
-  /** Unlocks audio playback if a gesture hasn't already done so. */
-  const activate = useCallback(() => {
-    if (isActivatedRef.current) {
-      return
-    }
-
-    isActivatedRef.current = true
-    void playerRef.current?.activateElement()
-  }, [])
+  }, [accessToken, activate])
 
   const togglePlay = useCallback(() => {
     activate()
@@ -249,6 +221,6 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     playTrack,
     claimPlayback,
     playbackErrorMessage,
-    isStalled,
+    isLicenseRefused,
   }
 }

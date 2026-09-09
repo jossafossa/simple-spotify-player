@@ -33,7 +33,7 @@ describe('usePlaybackMode', () => {
   })
 
   it('defaults to remote control after local playback has stalled here', async () => {
-    localStorage.setItem('spotify-player:local-playback-failed', 'true')
+    localStorage.setItem('spotify-player:local-playback-capable', 'false')
 
     const { result } = renderHook(() => usePlaybackMode())
 
@@ -71,7 +71,7 @@ describe('usePlaybackMode', () => {
       result.current.reportLocalPlaybackFailure()
     })
 
-    expect(localStorage.getItem('spotify-player:local-playback-failed')).toBe('true')
+    expect(localStorage.getItem('spotify-player:local-playback-capable')).toBe('false')
     // The failure moves the default, and the user's choice still outranks it.
     const { result: reopened } = renderHook(() => usePlaybackMode())
     expect(reopened.current.mode).toBe('local')

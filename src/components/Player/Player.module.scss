@@ -1,9 +1,11 @@
+@use '../theme' as t;
+
 .layout {
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
   justify-content: center;
-  gap: 24px;
+  gap: t.$s-5;
 }
 
 /**
@@ -13,7 +15,7 @@
  */
 .panelSlot {
   position: relative;
-  width: min(340px, 90vw);
+  width: min(352px, 92vw);
   min-height: 280px;
 }
 
@@ -22,94 +24,102 @@
   inset: 0;
 }
 
+/** A square plate, full column width, hairlined rather than rounded. */
 .artwork {
-  width: 240px;
-  height: 240px;
-  border-radius: 8px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid t.$rule;
+  border-radius: 0;
   object-fit: cover;
-  background: var(--color-surface-raised);
+  background: t.$ink-well;
 }
 
 .trackInfo {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: t.$s-2;
 }
 
+.eyebrow {
+  @include t.micro-label;
+
+  margin: 0;
+  color: t.$text-faint;
+}
+
+/** The one piece of display type on the screen. */
 .trackName {
-  margin: 0 0 4px;
-  font-size: 16px;
-  font-weight: 700;
+  @include t.display;
+
+  margin: 0;
+  color: t.$text;
 }
 
 .artistNames {
   margin: 0;
-  font-size: 13px;
-  color: var(--color-text-muted);
+  font-size: t.$fs-small;
+  line-height: t.$lh-snug;
+  letter-spacing: 0.01em;
+  color: t.$text-muted;
 }
 
+/** The lead paragraph — often the only copy on the card. */
 .message {
   margin: 0;
-  color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: t.$fs-lead;
+  line-height: t.$lh-body;
+  color: t.$text-muted;
 }
 
+/** Ruled in the margin, in a warmer ink — never a filled alert box. */
 .playbackError {
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--color-surface-raised);
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--color-text-muted);
+  padding: t.$s-3;
+  border: 1px solid t.$rule;
+  border-left: 2px solid t.$danger-rule;
+  border-radius: t.$radius-sm;
+  background: t.$ink-raised;
+  font-size: t.$fs-fine;
+  line-height: t.$lh-body;
+  color: t.$text-muted;
   text-align: left;
 }
 
 .claim {
-  padding: 9px 20px;
-  border: none;
-  border-radius: 999px;
-  background: var(--color-accent);
-  color: #000000;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-
-  &:hover {
-    filter: brightness(1.1);
-  }
+  @include t.button-primary;
 }
 
 .stallText {
-  margin: 0 0 8px;
+  margin: 0 0 t.$s-3;
 }
 
 .switchMode {
-  padding: 6px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  font-size: 12px;
-  cursor: pointer;
+  @include t.button-ghost;
 
-  &:hover {
-    border-color: var(--color-text-muted);
-  }
+  align-self: flex-start;
 }
 
+/** Footnote-sized aside under an action. */
 .hint {
   margin: 0;
-  font-size: 11px;
-  color: var(--color-text-muted);
+  font-size: t.$fs-fine;
+  line-height: t.$lh-body;
+  color: t.$text-faint;
+}
+
+/** Keyboard legend: monospaced, set as a colophon under a hairline. */
+.legend {
+  @include t.numerals;
+
+  margin: 0;
+  padding-top: t.$s-3;
+  border-top: 1px solid t.$rule-faint;
+  font-size: t.$fs-micro;
+  line-height: t.$lh-snug;
+  color: t.$text-faint;
 }
 
 .logout {
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  cursor: pointer;
-  text-decoration: underline;
-
-  &:hover {
-    color: var(--color-text);
-  }
+  @include t.button-quiet;
 }

@@ -1,27 +1,50 @@
+@use '../theme' as t;
+
+/**
+ * A segmented header bar rather than a pill switch: one outer hairline, an
+ * internal divider, and the active segment marked by an ochre underscore.
+ */
 .toggle {
   display: flex;
-  gap: 2px;
-  padding: 2px;
-  border-radius: 999px;
-  background: var(--color-surface-raised);
+  width: 100%;
+  border: 1px solid t.$rule;
+  border-radius: t.$radius-sm;
+  background: t.$ink-page;
 }
 
 .option {
-  padding: 5px 14px;
-  border: none;
-  border-radius: 999px;
+  @include t.button-base;
+  @include t.micro-label;
+
+  flex: 1;
+  padding: t.$s-2 t.$s-3;
+  border: 0;
+  // Reserved on every segment so marking one active shifts nothing.
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   background: transparent;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  cursor: pointer;
+  color: t.$text-faint;
+  transition:
+    color 120ms linear,
+    background-color 120ms linear;
+
+  & + & {
+    border-left: 1px solid t.$rule;
+  }
+
+  // Ruled inward so the ring cannot collide with the neighbouring segment.
+  &:focus-visible {
+    outline-offset: -2px;
+  }
 
   &:hover {
-    color: var(--color-text);
+    background: t.$ink-hover;
+    color: t.$text;
   }
 
   &[aria-pressed='true'] {
-    background: var(--color-accent);
-    color: #000000;
-    font-weight: 700;
+    border-bottom-color: t.$accent;
+    background: t.$accent-wash;
+    color: t.$accent;
   }
 }

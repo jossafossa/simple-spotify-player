@@ -1,0 +1,212 @@
+// =============================================================================
+// Editorial / technical theme
+//
+// Self-contained on purpose: the app's global custom properties live in
+// src/index.css, which this theme deliberately does not rely on. Every
+// *.module.scss under src/components `@use`s this file, so the palette, type
+// scale and spacing rhythm are declared exactly once.
+//
+// The look: ink-blue surfaces stacked in small value steps on a near-black
+// page, hairline rules instead of filled panels, near-square corners, a serif
+// for display type, and one warm ochre accent spent only on the active state,
+// the progress fill and the primary action.
+// =============================================================================
+
+// -- Surfaces -----------------------------------------------------------------
+// The page behind these is #121212, so the steps stay small and cool-toned.
+$ink-well: #0b0e13; // inputs, code blocks, the progress rail
+$ink-page: #101419;
+$ink-surface: #181d24; // cards and the playlist panel
+$ink-raised: #1e242c; // notices, insets
+$ink-hover: #252d37; // row and control hover
+
+// -- Rules --------------------------------------------------------------------
+$rule-faint: #20262e; // between list rows
+$rule: #29313c; // default hairline
+$rule-strong: #3a4350; // emphasised hairline, unfilled progress rail
+
+// -- Ink on paper -------------------------------------------------------------
+$text: #eae5db; // warm off-white, ~13:1 on $ink-surface
+$text-muted: #9ba3ae; // ~6.4:1
+$text-faint: #868d99; // ~5:1, micro-labels only
+$text-on-accent: #14181e;
+
+// -- Accent: dull gold / ochre ------------------------------------------------
+$accent: #cf9b45; // ~6.7:1 on $ink-surface
+$accent-bright: #e2ae5c; // hover
+$accent-deep: #a97a2e; // pressed
+$accent-wash: rgba(207, 155, 69, 0.09);
+$accent-wash-strong: rgba(207, 155, 69, 0.15);
+
+// -- Signal -------------------------------------------------------------------
+$danger: #d4867a;
+$danger-rule: #7a4b43;
+
+// -- Type ---------------------------------------------------------------------
+// System stacks only — no external stylesheets are available.
+$serif:
+  'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', 'Hoefler Text', Georgia,
+  'Times New Roman', serif;
+$sans: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+$mono:
+  ui-monospace, 'SF Mono', SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono',
+  monospace;
+
+// Scale: 11 / 12 / 13 / 14 / 15 / 20 / 27 — seven steps, no more
+$fs-micro: 11px; // uppercase labels
+$fs-fine: 12px; // numerals, footnotes
+$fs-small: 13px;
+$fs-body: 14px;
+$fs-lead: 15px; // lead paragraph on an otherwise empty card
+$fs-title: 20px; // serif, playlist name
+$fs-display: 27px; // serif, now-playing title
+
+$lh-tight: 1.15;
+$lh-snug: 1.35;
+$lh-body: 1.6;
+
+$ls-micro: 0.16em;
+$ls-display: -0.01em;
+
+// -- Rhythm: a 4px base -------------------------------------------------------
+$s-1: 4px;
+$s-2: 8px;
+$s-3: 12px;
+$s-4: 16px;
+$s-5: 20px;
+$s-6: 24px;
+
+// -- Geometry -----------------------------------------------------------------
+$radius: 2px;
+$radius-sm: 1px;
+
+// -- Patterns -----------------------------------------------------------------
+
+/// Wide-tracked uppercase label, for section headings and control captions.
+@mixin micro-label {
+  font-family: $sans;
+  font-size: $fs-micro;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: $ls-micro;
+  text-transform: uppercase;
+}
+
+/// Times, durations, counts and track numbers.
+@mixin numerals {
+  font-family: $mono;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/// Serif display type.
+@mixin display($size: $fs-display) {
+  font-family: $serif;
+  font-size: $size;
+  font-weight: 600;
+  line-height: $lh-tight;
+  letter-spacing: $ls-display;
+}
+
+/// One focus treatment everywhere: a square gold hairline, offset clear of the
+/// control's own border.
+@mixin focus-ring($offset: 2px) {
+  &:focus-visible {
+    outline: 1px solid $accent;
+    outline-offset: $offset;
+  }
+}
+
+@mixin button-base {
+  appearance: none;
+  margin: 0;
+  font-family: $sans;
+  border-radius: $radius-sm;
+  cursor: pointer;
+
+  @include focus-ring;
+}
+
+/// Rectangular outlined control — the default button.
+@mixin button-ghost {
+  @include button-base;
+  @include micro-label;
+
+  padding: $s-2 $s-3;
+  border: 1px solid $rule;
+  background: transparent;
+  color: $text-muted;
+  transition:
+    border-color 120ms linear,
+    color 120ms linear,
+    background-color 120ms linear;
+
+  &:hover:not(:disabled) {
+    border-color: $rule-strong;
+    background: $ink-hover;
+    color: $text;
+  }
+
+  &:disabled {
+    color: $text-faint;
+    cursor: not-allowed;
+  }
+}
+
+/// The one filled control on a screen: ochre, square, ink text.
+@mixin button-primary {
+  @include button-base;
+  @include micro-label;
+
+  // A notch up from the other micro-labels: it is the one thing to click.
+  font-size: $fs-fine;
+  padding: $s-3;
+  border: 1px solid $accent;
+  background: $accent;
+  color: $text-on-accent;
+  transition:
+    background-color 120ms linear,
+    border-color 120ms linear;
+
+  &:hover:not(:disabled) {
+    border-color: $accent-bright;
+    background: $accent-bright;
+  }
+
+  &:active:not(:disabled) {
+    border-color: $accent-deep;
+    background: $accent-deep;
+  }
+
+  &:disabled {
+    border-color: $rule;
+    background: transparent;
+    color: $text-faint;
+    cursor: not-allowed;
+  }
+}
+
+/// Text-only tertiary action, ruled rather than boxed.
+@mixin button-quiet {
+  @include button-base;
+  @include micro-label;
+
+  align-self: flex-start;
+  padding: $s-1 0;
+  border: 0;
+  border-bottom: 1px solid $rule-strong;
+  background: transparent;
+  color: $text-faint;
+
+  &:hover {
+    border-bottom-color: $accent;
+    color: $accent;
+  }
+}
+
+/// Recessed area for monospaced or quoted content.
+@mixin well {
+  border: 1px solid $rule;
+  border-radius: $radius-sm;
+  background: $ink-well;
+}

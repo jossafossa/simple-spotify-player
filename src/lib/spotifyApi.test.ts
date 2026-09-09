@@ -99,26 +99,57 @@ describe('fetchContextPlaylist', () => {
     expect(paths.some((path) => path.includes('/playlists/p1/tracks'))).toBe(false)
   })
 
-  it('still reads a listing that returns the older track field', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn((url: string) =>
-        Promise.resolve(
-          url.includes('/items')
-            ? jsonResponse({
-                total: 1,
+  it("uses the album response's embedded first page instead of asking twice", async () => {
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve(
+        url.includes('/tracks')
+          ? jsonResponse({ total: 1, items: [{ uri: 'spotify:track:9', name: 'Refetched' }] })
+          : jsonResponse({
+              name: 'The Album',
+              tracks: {
+                total: 2,
                 items: [
-                  { track: { uri: 'spotify:track:1', name: 'Legacy', duration_ms: 1_000 } },
+                  { uri: 'spotify:track:1', name: 'One', duration_ms: 1_000 },
+                  { uri: 'spotify:track:2', name: 'Two', duration_ms: 2_000 },
                 ],
-              })
-            : jsonResponse({ name: 'My Mix' }),
-        ),
+              },
+            }),
       ),
     )
+    vi.stubGlobal('fetch', fetchMock)
 
-    const playlist = await fetchContextPlaylist('token', { type: 'playlist', id: 'p1' })
+    const playlist = await fetchContextPlaylist('token', { type: 'album', id: 'a1' })
 
-    expect(playlist.tracks.map((track) => track.name)).toEqual(['Legacy'])
+    expect(playlist.tracks.map((track) => track.name)).toEqual(['One', 'Two'])
+    // The album object already held every track, so one request was enough.
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
+  it('pages past an album first page that does not hold every track', async () => {
+    const fetchMock = vi.fn((url: string) =>
+      Promise.resolve(
+        url.includes('/tracks')
+          ? jsonResponse({ total: 51, items: [{ uri: 'spotify:track:51', name: 'Track 51' }] })
+          : jsonResponse({
+              name: 'Long Album',
+              tracks: {
+                total: 51,
+                items: Array.from({ length: 50 }, (_unused, index) => ({
+                  uri: `spotify:track:${index}`,
+                  name: `Track ${index}`,
+                })),
+              },
+            }),
+      ),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const playlist = await fetchContextPlaylist('token', { type: 'album', id: 'a1' })
+
+    expect(playlist.tracks).toHaveLength(51)
+    expect(playlist.tracks[50]!.name).toBe('Track 51')
+    // The album call plus exactly one page for the leftover track.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it("carries Spotify's own explanation of a failure", async () => {

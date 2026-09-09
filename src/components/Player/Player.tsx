@@ -49,13 +49,13 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
   // device, and "Play here" is what actually moves the music across.
   const { claimPlayback } = local
 
-  // A stall means this browser cannot actually stream, so remember it and let
-  // the device default to remote control from now on.
+  // A refused licence means this browser cannot stream at all, so remember it
+  // and let the device default to remote control from now on.
   useEffect(() => {
-    if (local.isStalled) {
+    if (local.isLicenseRefused) {
       reportLocalPlaybackFailure()
     }
-  }, [local.isStalled, reportLocalPlaybackFailure])
+  }, [local.isLicenseRefused, reportLocalPlaybackFailure])
 
   const seekBy = (deltaMs: number) => {
     if (!playbackState) {
@@ -172,6 +172,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
           alt={playbackState.track.albumName}
         />
         <div className={styles.trackInfo}>
+          <p className={styles.eyebrow}>Now playing</p>
           <p className={styles.trackName}>{playbackState.track.name}</p>
           <p className={styles.artistNames}>
             {playbackState.track.artistNames.join(', ')}
@@ -203,20 +204,20 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
             Spotify could not play this track: {local.playbackErrorMessage}
           </p>
         )}
-        {!isRemote && local.isStalled && (
+        {!isRemote && local.isLicenseRefused && (
           <div className={styles.playbackError}>
             <p className={styles.stallText}>
-              Playback stalled. Spotify streams through Widevine DRM, and this
-              browser cannot get a licence — Firefox forks such as Zen ship the
-              plugin unlicensed. Play in Firefox itself, Chrome or Edge, or
-              control another device from here.
+              Spotify refused this browser a DRM licence, so playback will stop
+              a few seconds in. Firefox forks such as Zen ship Widevine
+              unlicensed. Play in Firefox itself, Chrome or Edge, or control
+              another device from here.
             </p>
             <button type="button" className={styles.switchMode} onClick={() => setMode('remote')}>
               Switch to remote control
             </button>
           </div>
         )}
-        <p className={styles.hint}>
+        <p className={styles.legend}>
           Space to play/pause · ← → to seek · N next · P previous
         </p>
         {logoutButton}

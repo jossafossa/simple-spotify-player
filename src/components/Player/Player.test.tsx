@@ -93,7 +93,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
-      isStalled: false,
+      isLicenseRefused: false,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -112,7 +112,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
-      isStalled: false,
+      isLicenseRefused: false,
     })
     const handleLogout = vi.fn()
     const user = userEvent.setup()
@@ -135,7 +135,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
-      isStalled: false,
+      isLicenseRefused: false,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -157,7 +157,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
-      isStalled: false,
+      isLicenseRefused: false,
     })
     const user = userEvent.setup()
 
@@ -182,7 +182,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
-      isStalled: false,
+      isLicenseRefused: false,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -207,7 +207,7 @@ describe('Player', () => {
       playTrack,
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
-      isStalled: false,
+      isLicenseRefused: false,
     })
     mockedUseSpotifyPlaylist.mockReturnValue({
       status: 'ready',
@@ -247,7 +247,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: 'Playback of protected content is not enabled.',
-      isStalled: false,
+      isLicenseRefused: false,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -255,7 +255,7 @@ describe('Player', () => {
     expect(screen.getByText(/Playback of protected content is not enabled/)).toBeInTheDocument()
   })
 
-  it('explains a stall as a DRM licence problem', () => {
+  it('explains a refused DRM licence', () => {
     mockedUseSpotifyPlayer.mockReturnValue({
       status: 'ready',
       playbackState: buildPlaybackState(),
@@ -266,13 +266,12 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
-      isStalled: true,
+      isLicenseRefused: true,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
 
-    expect(screen.getByText(/Playback stalled/)).toBeInTheDocument()
-    expect(screen.getByText(/Widevine DRM/)).toBeInTheDocument()
+    expect(screen.getByText(/refused this browser a DRM licence/)).toBeInTheDocument()
   })
 
   it('keeps the playlist inside the slot that matches the card height', () => {
@@ -286,7 +285,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
-      isStalled: false,
+      isLicenseRefused: false,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -308,7 +307,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
-      isStalled: false,
+      isLicenseRefused: false,
     })
     mockedUseSpotifyPlaylist.mockReturnValue({
       status: 'loading',
@@ -387,7 +386,7 @@ describe('Player', () => {
     expect(screen.getByText(/No Spotify devices are awake/)).toBeInTheDocument()
   })
 
-  it('remembers a stall so the device stops defaulting to local playback', () => {
+  it('remembers a refused licence so the device stops defaulting to local', () => {
     mockedUseSpotifyPlayer.mockReturnValue({
       status: 'ready',
       playbackState: buildPlaybackState(),
@@ -398,7 +397,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
-      isStalled: true,
+      isLicenseRefused: true,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -406,7 +405,7 @@ describe('Player', () => {
     expect(reportLocalPlaybackFailure).toHaveBeenCalled()
   })
 
-  it('offers a one-click switch to remote control when playback stalls', async () => {
+  it('offers a one-click switch to remote control when the licence is refused', async () => {
     mockedUseSpotifyPlayer.mockReturnValue({
       status: 'ready',
       playbackState: buildPlaybackState(),
@@ -417,7 +416,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
-      isStalled: true,
+      isLicenseRefused: true,
     })
     const user = userEvent.setup()
 
@@ -438,7 +437,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
-      isStalled: false,
+      isLicenseRefused: false,
     })
     const user = userEvent.setup()
 
@@ -460,7 +459,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback,
       playbackErrorMessage: undefined,
-      isStalled: false,
+      isLicenseRefused: false,
     })
     const user = userEvent.setup()
 
@@ -483,7 +482,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback,
       playbackErrorMessage: undefined,
-      isStalled: false,
+      isLicenseRefused: false,
     })
     mockedUseRemotePlayer.mockReturnValue({ ...remoteResult, status: 'no-device' })
     const user = userEvent.setup()
@@ -509,7 +508,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback,
       playbackErrorMessage: undefined,
-      isStalled: false,
+      isLicenseRefused: false,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -530,7 +529,7 @@ describe('Player', () => {
       playTrack: vi.fn(),
       claimPlayback,
       playbackErrorMessage: undefined,
-      isStalled: false,
+      isLicenseRefused: false,
     })
     const user = userEvent.setup()
 

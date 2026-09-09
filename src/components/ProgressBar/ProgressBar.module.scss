@@ -1,29 +1,49 @@
+@use '../theme' as t;
+
 .wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: t.$s-3;
   width: 100%;
 }
 
+/** Monospaced so the rail never shifts as the digits tick over. */
 .time {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  min-width: 32px;
-  text-align: center;
+  @include t.numerals;
+
+  flex: 0 0 auto;
+  min-width: 34px;
+  font-size: t.$fs-fine;
+  color: t.$text-faint;
 }
 
+.wrapper > .time:first-child {
+  text-align: right;
+  color: t.$text-muted;
+}
+
+.wrapper > .time:last-child {
+  text-align: left;
+}
+
+/** A flat rail, not a pill: 5px tall, square, hairlined against the well. */
 .track {
-  flex: 1;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--color-surface-raised);
-  cursor: pointer;
   position: relative;
+  flex: 1;
+  height: 5px;
+  border-radius: 0;
+  background: t.$ink-well;
+  box-shadow: inset 0 0 0 1px t.$rule;
+  cursor: pointer;
+
+  &:hover .fill {
+    background: t.$accent-bright;
+  }
 }
 
 .fill {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: 999px;
-  background: var(--color-accent);
+  border-radius: 0;
+  background: t.$accent;
 }

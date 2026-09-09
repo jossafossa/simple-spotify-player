@@ -1,34 +1,59 @@
+@use '../theme' as t;
+
+/**
+ * Transport as an instrument panel: three rectangles butted together on a
+ * shared hairline grid. No pills, no circle.
+ */
 .controls {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
+  align-items: stretch;
+  width: 100%;
+  gap: t.$s-1;
 }
 
 .button {
+  @include t.button-base;
+
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
-  border: none;
+  height: 38px;
+  padding: 0;
+  border: 1px solid t.$rule;
   background: transparent;
-  color: var(--color-text-muted);
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 999px;
+  color: t.$text-muted;
+  transition:
+    border-color 120ms linear,
+    color 120ms linear,
+    background-color 120ms linear;
+
+  &:focus-visible {
+    outline-offset: -3px;
+  }
 
   &:hover {
-    color: var(--color-text);
+    border-color: t.$rule-strong;
+    background: t.$ink-hover;
+    color: t.$text;
   }
 }
 
+/** The primary action, and the only filled control in the transport row. */
 .playButton {
-  width: 40px;
-  height: 40px;
-  background: var(--color-text);
-  color: #000;
+  flex: 1.6;
+  border-color: t.$accent;
+  background: t.$accent;
+  color: t.$text-on-accent;
 
   &:hover {
-    color: #000;
-    transform: scale(1.05);
+    border-color: t.$accent-bright;
+    background: t.$accent-bright;
+    color: t.$text-on-accent;
+  }
+
+  &:active {
+    border-color: t.$accent-deep;
+    background: t.$accent-deep;
   }
 }

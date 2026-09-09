@@ -1,62 +1,77 @@
+@use '../theme' as t;
+
 .form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: t.$s-4;
   width: 100%;
+  font-family: t.$sans;
 }
 
+/** Serif headline, ruled off from the body copy beneath it. */
 .title {
+  @include t.display(t.$fs-title);
+
   margin: 0;
-  font-size: 20px;
-  font-weight: 700;
+  padding-bottom: t.$s-3;
+  border-bottom: 1px solid t.$rule;
+  color: t.$text;
 }
 
 .hint {
   margin: 0;
-  font-size: 13px;
-  color: var(--color-text-muted);
+  font-size: t.$fs-small;
+  line-height: t.$lh-body;
+  color: t.$text-muted;
   text-align: left;
 }
 
 .hint a {
-  color: var(--color-accent);
+  color: t.$accent;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(207, 155, 69, 0.4);
+
+  &:hover {
+    border-bottom-color: t.$accent;
+  }
 }
 
 .redirectUri {
+  @include t.well;
+
   display: block;
-  margin-top: 8px;
-  padding: 8px;
-  border-radius: 6px;
-  background: var(--color-surface-raised);
-  font-size: 12px;
+  margin-top: t.$s-2;
+  padding: t.$s-2 t.$s-3;
+  font-family: t.$mono;
+  font-size: t.$fs-fine;
+  line-height: t.$lh-snug;
+  color: t.$text;
   word-break: break-all;
   user-select: all;
 }
 
 .input {
-  padding: 10px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  color: var(--color-text);
+  @include t.well;
+  @include t.focus-ring(1px);
 
-  &:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 1px;
+  padding: t.$s-3;
+  font-family: t.$mono;
+  font-size: t.$fs-small;
+  color: t.$text;
+
+  &::placeholder {
+    font-family: t.$sans;
+    letter-spacing: t.$ls-micro;
+    text-transform: uppercase;
+    font-size: t.$fs-micro;
+    color: t.$text-faint;
+  }
+
+  &:hover {
+    border-color: t.$rule-strong;
   }
 }
 
 .submit {
-  padding: 10px 12px;
-  border: none;
-  border-radius: 999px;
-  background: var(--color-accent);
-  color: #000;
-  font-weight: 700;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
+  @include t.button-primary;
 }

@@ -20,16 +20,17 @@ const createStorage = (): Storage => {
   } as Storage
 }
 
-// This jsdom build exposes sessionStorage but not localStorage, and implements
-// no scrollIntoView at all, so both are stubbed rather than worked around in
-// the components and libraries under test.
-if (!window.localStorage) {
-  Object.defineProperty(window, 'localStorage', { value: createStorage(), configurable: true })
-}
+// Node's own experimental localStorage shadows jsdom's and resolves to
+// undefined without --localstorage-file, and jsdom implements no
+// scrollIntoView at all. Both are installed unconditionally: feature-detecting
+// them would mean the suite exercised a different Storage depending on the
+// Node version it happened to run under.
+Object.defineProperty(window, 'localStorage', {
+  value: createStorage(),
+  configurable: true,
+})
 
-if (!Element.prototype.scrollIntoView) {
-  Element.prototype.scrollIntoView = () => {}
-}
+Element.prototype.scrollIntoView = () => {}
 
 afterEach(() => {
   cleanup()

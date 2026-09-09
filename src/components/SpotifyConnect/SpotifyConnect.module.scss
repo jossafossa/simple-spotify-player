@@ -1,35 +1,30 @@
+@use '../theme' as t;
+
 .message {
   margin: 0;
-  color: var(--color-text-muted);
-  font-size: 14px;
+  font-family: t.$sans;
+  font-size: t.$fs-lead;
+  line-height: t.$lh-body;
+  color: t.$text-muted;
 }
 
+/** Failures are ruled, not filled: a bar in the margin and a warmer ink. */
 .error {
   margin: 0;
-  color: #f15e6c;
-  font-size: 14px;
+  padding-left: t.$s-3;
+  border-left: 2px solid t.$danger-rule;
+  font-family: t.$sans;
+  font-size: t.$fs-small;
+  line-height: t.$lh-body;
+  color: t.$danger;
 }
 
 .connect {
+  @include t.button-primary;
+
   width: 100%;
-  padding: 10px 12px;
-  border: none;
-  border-radius: 999px;
-  background: var(--color-accent);
-  color: #000;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 .changeClientId {
-  border: none;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  cursor: pointer;
-  text-decoration: underline;
-
-  &:hover {
-    color: var(--color-text);
-  }
+  @include t.button-quiet;
 }

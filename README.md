@@ -22,9 +22,10 @@ remembered per browser.
 
 The default is chosen per device: the app asks the browser for Widevine up
 front and starts in remote mode when it isn't there. Because an unlicensed
-Widevine build claims support and only fails once a stream stalls, a stall is
-remembered too and moves that device's default to remote — an explicit choice
-from the toggle always wins over both.
+Widevine build claims support and only gives itself away when Spotify refuses
+it a licence, the outcome of the last licence request is remembered too and
+moves that device's default — either way, so a browser that once failed is not
+written off for good. An explicit choice from the toggle always wins over both.
 
 ## Requirements
 
@@ -43,9 +44,10 @@ from the toggle always wins over both.
     ([zen-browser/desktop#4875](https://github.com/zen-browser/desktop/issues/4875)).
     Use Firefox itself or a Chromium browser to listen.
 
-  The player detects this: if the SDK reports playing while the position stops
-  advancing, it says so and offers to switch to remote mode, which needs no
-  DRM at all.
+  The player detects this by watching those licence requests: a refusal is
+  unambiguous, where a stalled position cannot be told apart from ordinary
+  buffering. It then says so and offers to switch to remote mode, which needs
+  no DRM at all.
 
 ## Playlist viewer limitations
 

@@ -27,3 +27,17 @@ export type Playlist = {
   name: string
   tracks: PlaylistTrack[]
 }
+
+/**
+ * The controls every playback mode offers, however it reaches Spotify. Each
+ * mode's hook adds its own extras on top, so this stays the one declaration of
+ * the shared surface.
+ */
+export type PlayerControls = {
+  playbackState: PlaybackState | undefined
+  togglePlay: () => void
+  nextTrack: () => void
+  previousTrack: () => void
+  seek: (positionMs: number) => void
+  playTrack: (contextUri: string, trackUri: string) => void
+}

@@ -119,47 +119,33 @@ export const useSpotifyPlaylist = (
     }
   }, [accessToken, contextUri, reloadCount])
 
+  const pending = {
+    playlist: undefined,
+    errorStatus: undefined,
+    errorReason: undefined,
+    contextType: context?.type,
+    reload,
+  }
+
   if (!accessToken || !contextUri) {
-    return {
-      status: 'empty',
-      playlist: undefined,
-      errorStatus: undefined,
-      errorReason: undefined,
-      contextType: context?.type,
-      reload,
-    }
+    return { ...pending, status: 'empty' }
   }
 
   if (!isSupportedContext(context)) {
-    return {
-      status: 'unsupported',
-      playlist: undefined,
-      errorStatus: undefined,
-      errorReason: undefined,
-      contextType: context?.type,
-      reload,
-    }
+    return { ...pending, status: 'unsupported' }
   }
 
   // A token refresh restarts the fetch; keep showing the tracks we already
   // have for this context instead of blanking the panel.
   if (loaded?.contextUri !== contextUri) {
-    return {
-      status: 'loading',
-      playlist: undefined,
-      errorStatus: undefined,
-      errorReason: undefined,
-      contextType: context?.type,
-      reload,
-    }
+    return { ...pending, status: 'loading' }
   }
 
   return {
+    ...pending,
     status: loaded.status,
     playlist: loaded.playlist,
     errorStatus: loaded.errorStatus,
     errorReason: loaded.errorReason,
-    contextType: context?.type,
-    reload,
   }
 }
