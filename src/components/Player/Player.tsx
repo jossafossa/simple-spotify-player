@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Card } from '~/components/Card'
 import { Controls } from '~/components/Controls'
 import { DeviceSelect } from '~/components/DeviceSelect'
@@ -7,7 +7,6 @@ import { PlaylistPanel } from '~/components/PlaylistPanel'
 import { ProgressBar } from '~/components/ProgressBar'
 import { useKeyboardControls } from '~/hooks/useKeyboardControls'
 import { usePlaybackMode } from '~/hooks/usePlaybackMode'
-import type { PlaybackMode } from '~/lib/playbackMode'
 import { useRemotePlayer } from '~/hooks/useRemotePlayer'
 import { useSpotifyPlayer } from '~/hooks/useSpotifyPlayer'
 import { useSpotifyPlaylist } from '~/hooks/useSpotifyPlaylist'
@@ -23,7 +22,6 @@ const SEEK_STEP_MS = 5_000
 
 export const Player = ({ accessToken, onLogout }: PlayerProps) => {
   const { mode, setMode, reportLocalPlaybackFailure } = usePlaybackMode()
-  const [isClaimPending, setIsClaimPending] = useState(false)
 
   // Both hooks always run, and the inactive one is switched off by being
   // given no token — so no SDK device is claimed while controlling a remote
@@ -46,30 +44,10 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     reload: reloadPlaylist,
   } = useSpotifyPlaylist(accessToken, contextUri)
 
-  /**
-   * Switching to this browser is a deliberate act, so it takes playback over
-   * rather than leaving the user to hand it across in the Spotify app. Only
-   * the switch does this — grabbing playback on every page load would yank
-   * whatever is playing elsewhere whenever a tab happens to open.
-   */
-  const changeMode = useCallback(
-    (nextMode: PlaybackMode) => {
-      setMode(nextMode)
-      setIsClaimPending(nextMode === 'local')
-    },
-    [setMode],
-  )
-
+  // Taking playback off another device is always its own decision, never a
+  // side effect of choosing a mode: switching to this browser readies the
+  // device, and "Play here" is what actually moves the music across.
   const { claimPlayback } = local
-
-  useEffect(() => {
-    if (!isClaimPending || local.status !== 'ready') {
-      return
-    }
-
-    claimPlayback()
-    setIsClaimPending(false)
-  }, [isClaimPending, local.status, claimPlayback])
 
   // A stall means this browser cannot actually stream, so remember it and let
   // the device default to remote control from now on.
@@ -109,7 +87,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     [contextUri, playTrack],
   )
 
-  const modeToggle = mode && <ModeToggle mode={mode} onChange={changeMode} />
+  const modeToggle = mode && <ModeToggle mode={mode} onChange={setMode} />
 
   const logoutButton = (
     <button type="button" className={styles.logout} onClick={onLogout}>
@@ -175,7 +153,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
               Play here
             </button>
             <p className={styles.hint}>
-              This takes over from whatever device is playing now.
+              Moves playback off whichever device holds it right now.
             </p>
           </>
         )}
@@ -233,7 +211,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
               plugin unlicensed. Play in Firefox itself, Chrome or Edge, or
               control another device from here.
             </p>
-            <button type="button" className={styles.switchMode} onClick={() => changeMode('remote')}>
+            <button type="button" className={styles.switchMode} onClick={() => setMode('remote')}>
               Switch to remote control
             </button>
           </div>

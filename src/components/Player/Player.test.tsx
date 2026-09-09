@@ -470,7 +470,7 @@ describe('Player', () => {
     expect(claimPlayback).toHaveBeenCalledOnce()
   })
 
-  it('takes playback over once the device is ready after switching here', async () => {
+  it('does not take playback over merely by switching to this browser', async () => {
     const claimPlayback = vi.fn()
     mockedUsePlaybackMode.mockReturnValue({ mode: 'remote', setMode, reportLocalPlaybackFailure })
     mockedUseSpotifyPlayer.mockReturnValue({
@@ -492,8 +492,9 @@ describe('Player', () => {
 
     await user.click(screen.getByRole('button', { name: 'This browser' }))
 
+    // Choosing where playback *can* happen is not choosing to move it.
     expect(setMode).toHaveBeenCalledWith('local')
-    expect(claimPlayback).toHaveBeenCalledOnce()
+    expect(claimPlayback).not.toHaveBeenCalled()
   })
 
   it('does not take playback over on a plain load in local mode', () => {
