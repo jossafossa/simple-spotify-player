@@ -91,6 +91,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isStalled: false,
     })
@@ -109,6 +110,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isStalled: false,
     })
@@ -131,13 +133,14 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isStalled: false,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
 
-    expect(screen.getByText(/Connected\. Open Spotify/)).toBeInTheDocument()
+    expect(screen.getByText(/Nothing is playing here yet/)).toBeInTheDocument()
   })
 
   it('renders track info and wires controls to the player hook', async () => {
@@ -152,6 +155,7 @@ describe('Player', () => {
       previousTrack,
       seek: vi.fn(),
       playTrack: vi.fn(),
+      claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isStalled: false,
     })
@@ -176,6 +180,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek,
       playTrack: vi.fn(),
+      claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isStalled: false,
     })
@@ -200,6 +205,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack,
+      claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isStalled: false,
     })
@@ -239,6 +245,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      claimPlayback: vi.fn(),
       playbackErrorMessage: 'Playback of protected content is not enabled.',
       isStalled: false,
     })
@@ -257,6 +264,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isStalled: true,
     })
@@ -276,6 +284,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isStalled: false,
     })
@@ -297,6 +306,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isStalled: false,
     })
@@ -386,6 +396,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isStalled: true,
     })
@@ -404,6 +415,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isStalled: true,
     })
@@ -424,6 +436,7 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isStalled: false,
     })
@@ -433,5 +446,98 @@ describe('Player', () => {
 
     await user.click(screen.getByRole('button', { name: 'Remote' }))
     expect(setMode).toHaveBeenCalledWith('remote')
+  })
+
+  it('offers to take playback over when nothing is playing here', async () => {
+    const claimPlayback = vi.fn()
+    mockedUseSpotifyPlayer.mockReturnValue({
+      status: 'ready',
+      playbackState: undefined,
+      togglePlay: vi.fn(),
+      nextTrack: vi.fn(),
+      previousTrack: vi.fn(),
+      seek: vi.fn(),
+      playTrack: vi.fn(),
+      claimPlayback,
+      playbackErrorMessage: undefined,
+      isStalled: false,
+    })
+    const user = userEvent.setup()
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Play here' }))
+    expect(claimPlayback).toHaveBeenCalledOnce()
+  })
+
+  it('takes playback over once the device is ready after switching here', async () => {
+    const claimPlayback = vi.fn()
+    mockedUsePlaybackMode.mockReturnValue({ mode: 'remote', setMode, reportLocalPlaybackFailure })
+    mockedUseSpotifyPlayer.mockReturnValue({
+      status: 'ready',
+      playbackState: undefined,
+      togglePlay: vi.fn(),
+      nextTrack: vi.fn(),
+      previousTrack: vi.fn(),
+      seek: vi.fn(),
+      playTrack: vi.fn(),
+      claimPlayback,
+      playbackErrorMessage: undefined,
+      isStalled: false,
+    })
+    mockedUseRemotePlayer.mockReturnValue({ ...remoteResult, status: 'no-device' })
+    const user = userEvent.setup()
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'This browser' }))
+
+    expect(setMode).toHaveBeenCalledWith('local')
+    expect(claimPlayback).toHaveBeenCalledOnce()
+  })
+
+  it('does not take playback over on a plain load in local mode', () => {
+    const claimPlayback = vi.fn()
+    mockedUseSpotifyPlayer.mockReturnValue({
+      status: 'ready',
+      playbackState: undefined,
+      togglePlay: vi.fn(),
+      nextTrack: vi.fn(),
+      previousTrack: vi.fn(),
+      seek: vi.fn(),
+      playTrack: vi.fn(),
+      claimPlayback,
+      playbackErrorMessage: undefined,
+      isStalled: false,
+    })
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    // Opening a tab must not yank playback off whatever is playing elsewhere.
+    expect(claimPlayback).not.toHaveBeenCalled()
+  })
+
+  it('does not take playback over when switching to remote control', async () => {
+    const claimPlayback = vi.fn()
+    mockedUseSpotifyPlayer.mockReturnValue({
+      status: 'ready',
+      playbackState: undefined,
+      togglePlay: vi.fn(),
+      nextTrack: vi.fn(),
+      previousTrack: vi.fn(),
+      seek: vi.fn(),
+      playTrack: vi.fn(),
+      claimPlayback,
+      playbackErrorMessage: undefined,
+      isStalled: false,
+    })
+    const user = userEvent.setup()
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Remote' }))
+
+    expect(setMode).toHaveBeenCalledWith('remote')
+    expect(claimPlayback).not.toHaveBeenCalled()
   })
 })

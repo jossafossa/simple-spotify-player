@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { loadSpotifyPlaybackSdk } from '~/lib/loadSpotifyPlaybackSdk'
 import { mapSdkStateToPlaybackState } from '~/lib/mapSdkStateToPlaybackState'
-import { playTrackInContext } from '~/lib/spotifyApi'
+import { playTrackInContext, transferPlayback } from '~/lib/spotifyApi'
 import type { PlaybackState } from '~/lib/types'
 
 export type SpotifyPlayerStatus = 'idle' | 'connecting' | 'ready' | 'offline' | 'error'
@@ -14,6 +14,8 @@ export type UseSpotifyPlayerResult = {
   previousTrack: () => void
   seek: (positionMs: number) => void
   playTrack: (contextUri: string, trackUri: string) => void
+  /** Moves the account's playback onto this browser's SDK device. */
+  claimPlayback: () => void
   /** What the SDK last refused to play, if anything. */
   playbackErrorMessage: string | undefined
   /**
@@ -202,6 +204,25 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     void playerRef.current?.seek(positionMs)
   }, [])
 
+  /**
+   * Takes playback over from whatever device currently holds it. Only ever
+   * called from a user gesture, because the browser will not let the SDK's
+   * audio element start without one.
+   */
+  const claimPlayback = useCallback(() => {
+    const deviceId = deviceIdRef.current
+
+    if (!accessToken || !deviceId) {
+      return
+    }
+
+    activate()
+    transferPlayback(accessToken, deviceId).catch((error: unknown) => {
+      // Spotify refuses the transfer when the account has nothing to resume.
+      console.error('Could not move playback to this browser', error)
+    })
+  }, [accessToken, activate])
+
   // Jumping to an arbitrary track is not something the playback SDK exposes,
   // so it goes over the Web API against this player's device.
   const playTrack = useCallback(
@@ -226,6 +247,7 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     previousTrack,
     seek,
     playTrack,
+    claimPlayback,
     playbackErrorMessage,
     isStalled,
   }

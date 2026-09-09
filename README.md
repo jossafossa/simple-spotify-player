@@ -8,7 +8,11 @@ The toggle at the top of the player switches between them, and the choice is
 remembered per browser.
 
 - **This browser** — plays in the page through the Web Playback SDK. Needs a
-  browser licensed for Widevine (see below).
+  browser licensed for Widevine (see below). Switching to it takes playback
+  over from whichever device holds it, and a "Play here" button does the same
+  on demand. Merely loading the page does not: a tab opening would otherwise
+  yank the music off a speaker in another room, and a transfer needs a real
+  click anyway, since browsers refuse to start the SDK's audio without one.
 - **Remote** — drives Spotify running somewhere else: phone, desktop, speaker.
   Nothing is streamed here, so no DRM is involved. Playback state is polled
   from the Web API, and the device picker moves playback between devices.
