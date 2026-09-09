@@ -2,9 +2,16 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSpotifyPlayer } from './useSpotifyPlayer'
 
+import { playTrackInContext } from '~/lib/spotifyApi'
+
 vi.mock('~/lib/loadSpotifyPlaybackSdk', () => ({
   loadSpotifyPlaybackSdk: () => Promise.resolve(),
 }))
+vi.mock('~/lib/spotifyApi', () => ({
+  playTrackInContext: vi.fn().mockResolvedValue(undefined),
+}))
+
+const mockedPlayTrackInContext = vi.mocked(playTrackInContext)
 
 type Listener = (...args: unknown[]) => void
 
@@ -18,6 +25,8 @@ class FakeSpotifyPlayer {
   nextTrack = vi.fn().mockResolvedValue(undefined)
   previousTrack = vi.fn().mockResolvedValue(undefined)
   seek = vi.fn().mockResolvedValue(undefined)
+  activateElement = vi.fn().mockResolvedValue(undefined)
+  getCurrentState = vi.fn().mockResolvedValue(null)
 
   options: Spotify.PlayerInit
 
@@ -57,6 +66,7 @@ const buildSdkState = (): Spotify.PlaybackState =>
 describe('useSpotifyPlayer', () => {
   beforeEach(() => {
     FakeSpotifyPlayer.instances = []
+    mockedPlayTrackInContext.mockClear()
     window.Spotify = { Player: FakeSpotifyPlayer } as unknown as typeof Spotify
   })
 
@@ -100,6 +110,47 @@ describe('useSpotifyPlayer', () => {
     )
   })
 
+  it('reports the device as offline, not broken, when it drops out', async () => {
+    const { result } = renderHook(() => useSpotifyPlayer('a-token'))
+
+    await waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(1))
+    const player = FakeSpotifyPlayer.instances[0]!
+
+    act(() => {
+      player.emit('ready', { device_id: 'device-1' })
+      player.emit('not_ready', { device_id: 'device-1' })
+    })
+
+    await waitFor(() => expect(result.current.status).toBe('offline'))
+  })
+
+  it('unlocks the audio element on the first user gesture', async () => {
+    renderHook(() => useSpotifyPlayer('a-token'))
+
+    await waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(1))
+    const player = FakeSpotifyPlayer.instances[0]!
+
+    act(() => {
+      document.dispatchEvent(new Event('pointerdown'))
+      document.dispatchEvent(new Event('pointerdown'))
+    })
+
+    expect(player.activateElement).toHaveBeenCalledOnce()
+  })
+
+  it('unlocks the audio element when a control is used before any gesture', async () => {
+    const { result } = renderHook(() => useSpotifyPlayer('a-token'))
+
+    await waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(1))
+    const player = FakeSpotifyPlayer.instances[0]!
+
+    act(() => {
+      result.current.togglePlay()
+    })
+
+    expect(player.activateElement).toHaveBeenCalledOnce()
+  })
+
   it('moves to error status on an authentication error', async () => {
     const { result } = renderHook(() => useSpotifyPlayer('a-token'))
 
@@ -130,6 +181,40 @@ describe('useSpotifyPlayer', () => {
     expect(player.nextTrack).toHaveBeenCalledOnce()
     expect(player.previousTrack).toHaveBeenCalledOnce()
     expect(player.seek).toHaveBeenCalledWith(5_000)
+  })
+
+  it('plays a chosen track on this device once it is ready', async () => {
+    const { result } = renderHook(() => useSpotifyPlayer('a-token'))
+
+    await waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(1))
+    const player = FakeSpotifyPlayer.instances[0]!
+
+    act(() => {
+      player.emit('ready', { device_id: 'device-1' })
+    })
+
+    act(() => {
+      result.current.playTrack('spotify:playlist:p1', 'spotify:track:7')
+    })
+
+    expect(mockedPlayTrackInContext).toHaveBeenCalledWith({
+      accessToken: 'a-token',
+      deviceId: 'device-1',
+      contextUri: 'spotify:playlist:p1',
+      trackUri: 'spotify:track:7',
+    })
+  })
+
+  it('ignores a track jump before the device is ready', async () => {
+    const { result } = renderHook(() => useSpotifyPlayer('a-token'))
+
+    await waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(1))
+
+    act(() => {
+      result.current.playTrack('spotify:playlist:p1', 'spotify:track:7')
+    })
+
+    expect(mockedPlayTrackInContext).not.toHaveBeenCalled()
   })
 
   it('disconnects the player when the token is cleared', async () => {

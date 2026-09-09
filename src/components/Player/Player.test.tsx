@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useKeyboardControls } from '~/hooks/useKeyboardControls'
 import { useSpotifyPlayer } from '~/hooks/useSpotifyPlayer'
+import { useSpotifyPlaylist } from '~/hooks/useSpotifyPlaylist'
 import type { PlaybackState } from '~/lib/types'
 import { Player } from './Player'
 
@@ -12,19 +13,25 @@ vi.mock('~/hooks/useSpotifyPlayer', () => ({
 vi.mock('~/hooks/useKeyboardControls', () => ({
   useKeyboardControls: vi.fn(),
 }))
+vi.mock('~/hooks/useSpotifyPlaylist', () => ({
+  useSpotifyPlaylist: vi.fn(() => ({ status: 'empty', playlist: undefined })),
+}))
 
 const mockedUseSpotifyPlayer = vi.mocked(useSpotifyPlayer)
 const mockedUseKeyboardControls = vi.mocked(useKeyboardControls)
+const mockedUseSpotifyPlaylist = vi.mocked(useSpotifyPlaylist)
 
 const buildPlaybackState = (overrides: Partial<PlaybackState> = {}): PlaybackState => ({
   track: {
     id: 'track-1',
+    uri: 'spotify:track:track-1',
     name: 'Song Title',
     artistNames: ['Artist One', 'Artist Two'],
     albumName: 'Album Name',
     albumImageUrl: 'https://example.com/art.jpg',
     durationMs: 200_000,
   },
+  contextUri: undefined,
   positionMs: 30_000,
   isPaused: false,
   ...overrides,
@@ -43,6 +50,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      playTrack: vi.fn(),
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -58,6 +66,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      playTrack: vi.fn(),
     })
     const handleLogout = vi.fn()
     const user = userEvent.setup()
@@ -77,6 +86,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      playTrack: vi.fn(),
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -95,6 +105,7 @@ describe('Player', () => {
       nextTrack,
       previousTrack,
       seek: vi.fn(),
+      playTrack: vi.fn(),
     })
     const user = userEvent.setup()
 
@@ -116,6 +127,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek,
+      playTrack: vi.fn(),
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -126,5 +138,56 @@ describe('Player', () => {
 
     handlers.onSeekBackward()
     expect(seek).toHaveBeenCalledWith(25_000)
+  })
+
+  it('jumps to a track picked from the playlist panel, keeping the context', async () => {
+    const playTrack = vi.fn()
+    mockedUseSpotifyPlayer.mockReturnValue({
+      status: 'ready',
+      playbackState: buildPlaybackState({ contextUri: 'spotify:playlist:p1' }),
+      togglePlay: vi.fn(),
+      nextTrack: vi.fn(),
+      previousTrack: vi.fn(),
+      seek: vi.fn(),
+      playTrack,
+    })
+    mockedUseSpotifyPlaylist.mockReturnValue({
+      status: 'ready',
+      playlist: {
+        name: 'My Mix',
+        tracks: [
+          {
+            uri: 'spotify:track:other',
+            name: 'Other Song',
+            artistNames: ['Artist'],
+            durationMs: 60_000,
+          },
+        ],
+      },
+    })
+    const user = userEvent.setup()
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    await user.click(screen.getByText('Other Song'))
+
+    expect(playTrack).toHaveBeenCalledWith('spotify:playlist:p1', 'spotify:track:other')
+  })
+
+  it('loads the playlist for whatever context is playing', () => {
+    mockedUseSpotifyPlayer.mockReturnValue({
+      status: 'ready',
+      playbackState: buildPlaybackState({ contextUri: 'spotify:playlist:p1' }),
+      togglePlay: vi.fn(),
+      nextTrack: vi.fn(),
+      previousTrack: vi.fn(),
+      seek: vi.fn(),
+      playTrack: vi.fn(),
+    })
+    mockedUseSpotifyPlaylist.mockReturnValue({ status: 'loading', playlist: undefined })
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    expect(mockedUseSpotifyPlaylist).toHaveBeenCalledWith('token', 'spotify:playlist:p1')
   })
 })

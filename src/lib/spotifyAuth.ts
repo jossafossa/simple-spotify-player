@@ -7,6 +7,8 @@ export const SPOTIFY_SCOPES = [
   'user-read-private',
   'user-modify-playback-state',
   'user-read-playback-state',
+  'playlist-read-private',
+  'playlist-read-collaborative',
 ]
 
 /**
@@ -48,19 +50,34 @@ export type SpotifyTokens = {
   accessToken: string
   refreshToken: string
   expiresAt: number
+  /** What Spotify actually granted, which can lag behind SPOTIFY_SCOPES. */
+  grantedScopes?: string[]
 }
 
 type TokenResponse = {
   access_token: string
   refresh_token?: string
   expires_in: number
+  scope?: string
 }
 
-const toSpotifyTokens = (data: TokenResponse, fallbackRefreshToken: string): SpotifyTokens => ({
+const toSpotifyTokens = (
+  data: TokenResponse,
+  fallback: Pick<SpotifyTokens, 'refreshToken' | 'grantedScopes'>,
+): SpotifyTokens => ({
   accessToken: data.access_token,
-  refreshToken: data.refresh_token ?? fallbackRefreshToken,
+  refreshToken: data.refresh_token ?? fallback.refreshToken,
   expiresAt: Date.now() + data.expires_in * 1000,
+  grantedScopes: data.scope ? data.scope.split(' ') : fallback.grantedScopes,
 })
+
+/**
+ * Tokens stored before a scope was added still refresh happily, but requests
+ * needing the new scope fail — so those tokens have to be thrown away and the
+ * user sent through the authorize page again.
+ */
+export const hasRequiredScopes = (tokens: SpotifyTokens): boolean =>
+  SPOTIFY_SCOPES.every((scope) => tokens.grantedScopes?.includes(scope))
 
 const requestToken = async (body: URLSearchParams): Promise<TokenResponse> => {
   const response = await fetch(TOKEN_URL, {
@@ -99,17 +116,19 @@ export const exchangeCodeForTokens = async ({
     }),
   )
 
-  return toSpotifyTokens(data, '')
+  return toSpotifyTokens(data, { refreshToken: '' })
 }
 
 type RefreshTokensParams = {
   clientId: string
   refreshToken: string
+  grantedScopes: string[] | undefined
 }
 
 export const refreshTokens = async ({
   clientId,
   refreshToken,
+  grantedScopes,
 }: RefreshTokensParams): Promise<SpotifyTokens> => {
   const data = await requestToken(
     new URLSearchParams({
@@ -119,5 +138,7 @@ export const refreshTokens = async ({
     }),
   )
 
-  return toSpotifyTokens(data, refreshToken)
+  // Spotify usually echoes the scopes back, but carrying the old ones over
+  // keeps a refresh from looking like a scope downgrade if it doesn't.
+  return toSpotifyTokens(data, { refreshToken, grantedScopes })
 }

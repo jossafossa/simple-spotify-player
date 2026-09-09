@@ -15,6 +15,7 @@ import {
   buildAuthorizeUrl,
   exchangeCodeForTokens,
   getRedirectUri,
+  hasRequiredScopes,
   redirectTo,
   refreshTokens,
   type SpotifyTokens,
@@ -36,9 +37,21 @@ export type UseSpotifyAuthResult = {
 
 const REFRESH_MARGIN_MS = 60_000
 
+/** Drops stored tokens that predate a scope this version of the app needs. */
+const readUsableStoredTokens = (): SpotifyTokens | undefined => {
+  const stored = readStoredTokens()
+
+  if (stored && !hasRequiredScopes(stored)) {
+    clearStoredTokens()
+    return undefined
+  }
+
+  return stored
+}
+
 export const useSpotifyAuth = (): UseSpotifyAuthResult => {
   const [clientId, setClientIdState] = useState(readStoredClientId)
-  const [tokens, setTokens] = useState(readStoredTokens)
+  const [tokens, setTokens] = useState(readUsableStoredTokens)
   const [errorMessage, setErrorMessage] = useState<string>()
   const [isSigningIn, setIsSigningIn] = useState(false)
 
@@ -92,7 +105,11 @@ export const useSpotifyAuth = (): UseSpotifyAuthResult => {
     }
 
     const refreshTokensAndSchedule = (currentTokens: SpotifyTokens) => {
-      refreshTokens({ clientId, refreshToken: currentTokens.refreshToken })
+      refreshTokens({
+        clientId,
+        refreshToken: currentTokens.refreshToken,
+        grantedScopes: currentTokens.grantedScopes,
+      })
         .then((newTokens) => {
           saveStoredTokens(newTokens)
           setTokens(newTokens)

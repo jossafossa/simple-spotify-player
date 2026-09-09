@@ -6,12 +6,14 @@ import type { PlaybackState } from '~/lib/types'
 const buildPlaybackState = (overrides: Partial<PlaybackState> = {}): PlaybackState => ({
   track: {
     id: 'track-1',
+    uri: 'spotify:track:track-1',
     name: 'Song',
     artistNames: ['Artist'],
     albumName: 'Album',
     albumImageUrl: undefined,
     durationMs: 200_000,
   },
+  contextUri: undefined,
   positionMs: 10_000,
   isPaused: false,
   ...overrides,

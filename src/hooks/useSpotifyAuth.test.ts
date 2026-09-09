@@ -1,6 +1,12 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { buildAuthorizeUrl, exchangeCodeForTokens, redirectTo, refreshTokens } from '~/lib/spotifyAuth'
+import {
+  buildAuthorizeUrl,
+  exchangeCodeForTokens,
+  hasRequiredScopes,
+  redirectTo,
+  refreshTokens,
+} from '~/lib/spotifyAuth'
 import { useSpotifyAuth } from './useSpotifyAuth'
 
 vi.mock('~/lib/spotifyAuth', () => ({
@@ -9,6 +15,7 @@ vi.mock('~/lib/spotifyAuth', () => ({
   redirectTo: vi.fn(),
   exchangeCodeForTokens: vi.fn(),
   refreshTokens: vi.fn(),
+  hasRequiredScopes: vi.fn(() => true),
 }))
 vi.mock('~/lib/pkce', () => ({
   generateCodeVerifier: () => 'verifier-1',
@@ -20,6 +27,7 @@ const mockedBuildAuthorizeUrl = vi.mocked(buildAuthorizeUrl)
 const mockedRedirectTo = vi.mocked(redirectTo)
 const mockedExchangeCodeForTokens = vi.mocked(exchangeCodeForTokens)
 const mockedRefreshTokens = vi.mocked(refreshTokens)
+const mockedHasRequiredScopes = vi.mocked(hasRequiredScopes)
 
 const setUrl = (pathAndQuery: string) => {
   window.history.pushState(null, '', pathAndQuery)
@@ -124,6 +132,21 @@ describe('useSpotifyAuth', () => {
     expect(mockedExchangeCodeForTokens).not.toHaveBeenCalled()
   })
 
+  it('discards stored tokens that predate a scope the app now needs', () => {
+    mockedHasRequiredScopes.mockReturnValueOnce(false)
+    localStorage.setItem('spotify-player:client-id', 'client-123')
+    localStorage.setItem(
+      'spotify-player:tokens',
+      JSON.stringify({ accessToken: 'a', refreshToken: 'r', expiresAt: Date.now() + 1000 }),
+    )
+
+    const { result } = renderHook(() => useSpotifyAuth())
+
+    expect(result.current.status).toBe('signed-out')
+    expect(result.current.accessToken).toBeUndefined()
+    expect(localStorage.getItem('spotify-player:tokens')).toBeNull()
+  })
+
   it('logout clears tokens but keeps the client id', () => {
     localStorage.setItem('spotify-player:client-id', 'client-123')
     localStorage.setItem(
@@ -171,6 +194,7 @@ describe('useSpotifyAuth', () => {
       accessToken: 'new',
       refreshToken: 'refresh-1',
       expiresAt: Date.now() + 3_600_000,
+      grantedScopes: ['streaming'],
     })
 
     const { result } = renderHook(() => useSpotifyAuth())

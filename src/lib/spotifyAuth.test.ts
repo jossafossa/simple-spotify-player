@@ -3,6 +3,7 @@ import {
   buildAuthorizeUrl,
   exchangeCodeForTokens,
   getRedirectUri,
+  hasRequiredScopes,
   refreshTokens,
   SPOTIFY_SCOPES,
 } from './spotifyAuth'
@@ -95,7 +96,11 @@ describe('refreshTokens', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const tokens = await refreshTokens({ clientId: 'client-123', refreshToken: 'refresh-1' })
+    const tokens = await refreshTokens({
+      clientId: 'client-123',
+      refreshToken: 'refresh-1',
+      grantedScopes: ['streaming'],
+    })
 
     expect(tokens.accessToken).toBe('access-2')
     expect(tokens.refreshToken).toBe('refresh-1')
@@ -104,5 +109,21 @@ describe('refreshTokens', () => {
     const body = init.body as URLSearchParams
     expect(body.get('grant_type')).toBe('refresh_token')
     expect(body.get('refresh_token')).toBe('refresh-1')
+  })
+})
+
+describe('hasRequiredScopes', () => {
+  const tokens = { accessToken: 'a', refreshToken: 'r', expiresAt: 0 }
+
+  it('accepts a token granted every scope the app asks for', () => {
+    expect(hasRequiredScopes({ ...tokens, grantedScopes: [...SPOTIFY_SCOPES] })).toBe(true)
+  })
+
+  it('rejects a token granted only some of them', () => {
+    expect(hasRequiredScopes({ ...tokens, grantedScopes: ['streaming'] })).toBe(false)
+  })
+
+  it('rejects a token stored before scopes were recorded at all', () => {
+    expect(hasRequiredScopes(tokens)).toBe(false)
   })
 })
