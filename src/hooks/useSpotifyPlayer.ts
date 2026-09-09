@@ -16,6 +16,11 @@ export type UseSpotifyPlayerResult = {
   playTrack: (contextUri: string, trackUri: string) => void
   /** What the SDK last refused to play, if anything. */
   playbackErrorMessage: string | undefined
+  /**
+   * True when the SDK claims to be playing but the position is not moving.
+   * A failed DRM licence fetch stalls exactly like this and reports nothing.
+   */
+  isStalled: boolean
 }
 
 const PLAYER_NAME = 'Spotify Player (web)'
@@ -33,6 +38,8 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
   )
   const [playbackState, setPlaybackState] = useState<PlaybackState>()
   const [playbackErrorMessage, setPlaybackErrorMessage] = useState<string>()
+  const [isStalled, setIsStalled] = useState(false)
+  const lastSyncRef = useRef<{ trackUri: string; positionMs: number } | undefined>(undefined)
   const playerRef = useRef<Spotify.Player | undefined>(undefined)
   const deviceIdRef = useRef<string | undefined>(undefined)
   const isActivatedRef = useRef(false)
@@ -44,6 +51,7 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     setConnectionStatus('connecting')
     setPlaybackState(undefined)
     setPlaybackErrorMessage(undefined)
+    setIsStalled(false)
   }
 
   const status: SpotifyPlayerStatus = !accessToken ? 'idle' : connectionStatus
@@ -128,9 +136,27 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
 
       syncIntervalId = setInterval(() => {
         player.getCurrentState().then((state) => {
-          if (!isCancelled && state) {
-            setPlaybackState(mapSdkStateToPlaybackState(state))
+          if (isCancelled || !state) {
+            return
           }
+
+          const current = mapSdkStateToPlaybackState(state)
+          setPlaybackState(current)
+
+          const previous = lastSyncRef.current
+          lastSyncRef.current = {
+            trackUri: current.track.uri,
+            positionMs: current.positionMs,
+          }
+
+          // Only the same track running twice without advancing counts as a
+          // stall; a track change legitimately rewinds the position to zero.
+          if (current.isPaused || previous?.trackUri !== current.track.uri) {
+            setIsStalled(false)
+            return
+          }
+
+          setIsStalled(current.positionMs <= previous.positionMs)
         })
       }, STATE_SYNC_INTERVAL_MS)
     })
@@ -143,6 +169,7 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
       playerRef.current = undefined
       deviceIdRef.current = undefined
       isActivatedRef.current = false
+      lastSyncRef.current = undefined
     }
   }, [accessToken])
 
@@ -200,5 +227,6 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     seek,
     playTrack,
     playbackErrorMessage,
+    isStalled,
   }
 }

@@ -48,14 +48,17 @@ class FakeSpotifyPlayer {
   }
 }
 
-const buildSdkState = (): Spotify.PlaybackState =>
+const buildSdkState = (
+  overrides: { position?: number; paused?: boolean; uri?: string } = {},
+): Spotify.PlaybackState =>
   ({
     duration: 100_000,
-    paused: false,
-    position: 0,
+    paused: overrides.paused ?? false,
+    position: overrides.position ?? 0,
     track_window: {
       current_track: {
         id: 'track-1',
+        uri: overrides.uri ?? 'spotify:track:track-1',
         name: 'Song',
         artists: [{ name: 'Artist' }],
         album: { name: 'Album', images: [] },
@@ -186,6 +189,57 @@ describe('useSpotifyPlayer', () => {
     })
 
     await waitFor(() => expect(result.current.playbackErrorMessage).toBeUndefined())
+  })
+
+  it('flags a stall when the same track stops advancing', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const { result } = renderHook(() => useSpotifyPlayer('a-token'))
+
+    await vi.waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(1))
+    const player = FakeSpotifyPlayer.instances[0]!
+    player.getCurrentState.mockResolvedValue(buildSdkState({ position: 10_000 }))
+
+    // Two polls at the same position on the same track is the stall signal.
+    await act(() => vi.advanceTimersByTimeAsync(5_000))
+    await act(() => vi.advanceTimersByTimeAsync(5_000))
+
+    expect(result.current.isStalled).toBe(true)
+    vi.useRealTimers()
+  })
+
+  it('does not flag a stall while the position keeps advancing', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const { result } = renderHook(() => useSpotifyPlayer('a-token'))
+
+    await vi.waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(1))
+    const player = FakeSpotifyPlayer.instances[0]!
+
+    player.getCurrentState.mockResolvedValue(buildSdkState({ position: 10_000 }))
+    await act(() => vi.advanceTimersByTimeAsync(5_000))
+    player.getCurrentState.mockResolvedValue(buildSdkState({ position: 15_000 }))
+    await act(() => vi.advanceTimersByTimeAsync(5_000))
+
+    expect(result.current.isStalled).toBe(false)
+    vi.useRealTimers()
+  })
+
+  it('does not mistake a track change for a stall', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    const { result } = renderHook(() => useSpotifyPlayer('a-token'))
+
+    await vi.waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(1))
+    const player = FakeSpotifyPlayer.instances[0]!
+
+    player.getCurrentState.mockResolvedValue(buildSdkState({ position: 90_000 }))
+    await act(() => vi.advanceTimersByTimeAsync(5_000))
+    // The next track legitimately restarts the position at zero.
+    player.getCurrentState.mockResolvedValue(
+      buildSdkState({ position: 0, uri: 'spotify:track:track-2' }),
+    )
+    await act(() => vi.advanceTimersByTimeAsync(5_000))
+
+    expect(result.current.isStalled).toBe(false)
+    vi.useRealTimers()
   })
 
   it('moves to error status on an authentication error', async () => {

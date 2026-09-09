@@ -58,6 +58,7 @@ describe('Player', () => {
       seek: vi.fn(),
       playTrack: vi.fn(),
       playbackErrorMessage: undefined,
+      isStalled: false,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -75,6 +76,7 @@ describe('Player', () => {
       seek: vi.fn(),
       playTrack: vi.fn(),
       playbackErrorMessage: undefined,
+      isStalled: false,
     })
     const handleLogout = vi.fn()
     const user = userEvent.setup()
@@ -96,6 +98,7 @@ describe('Player', () => {
       seek: vi.fn(),
       playTrack: vi.fn(),
       playbackErrorMessage: undefined,
+      isStalled: false,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -116,6 +119,7 @@ describe('Player', () => {
       seek: vi.fn(),
       playTrack: vi.fn(),
       playbackErrorMessage: undefined,
+      isStalled: false,
     })
     const user = userEvent.setup()
 
@@ -139,6 +143,7 @@ describe('Player', () => {
       seek,
       playTrack: vi.fn(),
       playbackErrorMessage: undefined,
+      isStalled: false,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
@@ -162,6 +167,7 @@ describe('Player', () => {
       seek: vi.fn(),
       playTrack,
       playbackErrorMessage: undefined,
+      isStalled: false,
     })
     mockedUseSpotifyPlaylist.mockReturnValue({
       status: 'ready',
@@ -189,7 +195,7 @@ describe('Player', () => {
     expect(playTrack).toHaveBeenCalledWith('spotify:playlist:p1', 'spotify:track:other')
   })
 
-  it('surfaces an SDK playback error with the Firefox DRM hint', () => {
+  it('surfaces an SDK playback error verbatim', () => {
     mockedUseSpotifyPlayer.mockReturnValue({
       status: 'ready',
       playbackState: buildPlaybackState(),
@@ -199,12 +205,31 @@ describe('Player', () => {
       seek: vi.fn(),
       playTrack: vi.fn(),
       playbackErrorMessage: 'Playback of protected content is not enabled.',
+      isStalled: false,
     })
 
     render(<Player accessToken="token" onLogout={vi.fn()} />)
 
     expect(screen.getByText(/Playback of protected content is not enabled/)).toBeInTheDocument()
-    expect(screen.getByText(/DRM content/)).toBeInTheDocument()
+  })
+
+  it('explains a stall as a DRM licence problem', () => {
+    mockedUseSpotifyPlayer.mockReturnValue({
+      status: 'ready',
+      playbackState: buildPlaybackState(),
+      togglePlay: vi.fn(),
+      nextTrack: vi.fn(),
+      previousTrack: vi.fn(),
+      seek: vi.fn(),
+      playTrack: vi.fn(),
+      playbackErrorMessage: undefined,
+      isStalled: true,
+    })
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    expect(screen.getByText(/Playback stalled/)).toBeInTheDocument()
+    expect(screen.getByText(/widevine-license/)).toBeInTheDocument()
   })
 
   it('loads the playlist for whatever context is playing', () => {
@@ -217,6 +242,7 @@ describe('Player', () => {
       seek: vi.fn(),
       playTrack: vi.fn(),
       playbackErrorMessage: undefined,
+      isStalled: false,
     })
     mockedUseSpotifyPlaylist.mockReturnValue({
       status: 'loading',

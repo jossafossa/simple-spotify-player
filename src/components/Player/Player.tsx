@@ -26,6 +26,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     seek,
     playTrack,
     playbackErrorMessage,
+    isStalled,
   } = useSpotifyPlayer(accessToken)
   const positionMs = useTickingPosition(playbackState)
   const contextUri = playbackState?.contextUri
@@ -135,8 +136,17 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
         )}
         {playbackErrorMessage && (
           <p className={styles.playbackError}>
-            Spotify could not play this track: {playbackErrorMessage} In Firefox, check
-            Settings → General → DRM content → "Play DRM-controlled content".
+            Spotify could not play this track: {playbackErrorMessage}
+          </p>
+        )}
+        {isStalled && (
+          <p className={styles.playbackError}>
+            Playback stalled. Spotify streams through Widevine DRM, so this
+            usually means the browser cannot get a licence — check the console
+            for a failing <code>widevine-license</code> request. Firefox forks
+            such as Zen ship the Widevine plugin without a licence for it, so
+            playback stops a few seconds in; Firefox itself, Chrome or Edge
+            will play.
           </p>
         )}
         <p className={styles.hint}>

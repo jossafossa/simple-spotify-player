@@ -5,11 +5,21 @@ A browser-only Spotify player using PKCE auth and the Web Playback SDK.
 ## Requirements
 
 - **Spotify Premium.** The Web Playback SDK refuses to play without it.
-- **DRM playback enabled in the browser.** The SDK plays protected content
-  through Widevine. Firefox ships with this behind a setting: if playback is
-  silent while the progress bar keeps moving, turn on
-  *Settings → General → DRM content → "Play DRM-controlled content"* and
-  reload. Chrome, Edge and Safari have it on by default.
+- **A browser with a Widevine DRM licence.** The SDK plays protected content
+  through Widevine, and Spotify's licence server refuses anything else with a
+  403 on `/v1/widevine-license/…`. Playback then runs for about ten seconds —
+  the length of the buffer it already had — and cuts off, often skipping to
+  the next track.
+  - Firefox, Chrome, Edge and Safari are licensed. Firefox keeps it behind
+    *Settings → General → DRM content → "Play DRM-controlled content"*.
+  - **Firefox forks such as Zen are not licensed.** They ship Widevine
+    inherited from Firefox, so the setting looks enabled and the plugin looks
+    installed, but licence requests are refused
+    ([zen-browser/desktop#4875](https://github.com/zen-browser/desktop/issues/4875)).
+    Use Firefox itself or a Chromium browser to listen.
+
+  The player detects this: if the SDK reports playing while the position stops
+  advancing, it says so and points at the licence requests in the console.
 
 ## Playlist viewer limitations
 
