@@ -1,6 +1,8 @@
 export { Card } from './Card'
 export { ClientIdForm } from './ClientIdForm'
 export { Controls } from './Controls'
+export { DeviceSelect } from './DeviceSelect'
+export { ModeToggle } from './ModeToggle'
 export { Player } from './Player'
 export { PlaylistPanel } from './PlaylistPanel'
 export { ProgressBar } from './ProgressBar'

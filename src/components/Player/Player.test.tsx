@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useKeyboardControls } from '~/hooks/useKeyboardControls'
 import { useSpotifyPlayer } from '~/hooks/useSpotifyPlayer'
+import { usePlaybackMode } from '~/hooks/usePlaybackMode'
+import { useRemotePlayer } from '~/hooks/useRemotePlayer'
 import { useSpotifyPlaylist } from '~/hooks/useSpotifyPlaylist'
 import type { PlaybackState } from '~/lib/types'
 import { Player } from './Player'
@@ -12,6 +14,12 @@ vi.mock('~/hooks/useSpotifyPlayer', () => ({
 }))
 vi.mock('~/hooks/useKeyboardControls', () => ({
   useKeyboardControls: vi.fn(),
+}))
+vi.mock('~/hooks/usePlaybackMode', () => ({
+  usePlaybackMode: vi.fn(),
+}))
+vi.mock('~/hooks/useRemotePlayer', () => ({
+  useRemotePlayer: vi.fn(),
 }))
 vi.mock('~/hooks/useSpotifyPlaylist', () => ({
   useSpotifyPlaylist: vi.fn(() => ({
@@ -24,6 +32,24 @@ vi.mock('~/hooks/useSpotifyPlaylist', () => ({
   })),
 }))
 
+const setMode = vi.fn()
+const reportLocalPlaybackFailure = vi.fn()
+
+const remoteResult = {
+  status: 'idle' as const,
+  playbackState: undefined,
+  togglePlay: vi.fn(),
+  nextTrack: vi.fn(),
+  previousTrack: vi.fn(),
+  seek: vi.fn(),
+  playTrack: vi.fn(),
+  devices: [],
+  activeDeviceName: undefined,
+  selectDevice: vi.fn(),
+}
+
+const mockedUsePlaybackMode = vi.mocked(usePlaybackMode)
+const mockedUseRemotePlayer = vi.mocked(useRemotePlayer)
 const mockedUseSpotifyPlayer = vi.mocked(useSpotifyPlayer)
 const mockedUseKeyboardControls = vi.mocked(useKeyboardControls)
 const mockedUseSpotifyPlaylist = vi.mocked(useSpotifyPlaylist)
@@ -45,6 +71,13 @@ const buildPlaybackState = (overrides: Partial<PlaybackState> = {}): PlaybackSta
 })
 
 describe('Player', () => {
+  beforeEach(() => {
+    setMode.mockClear()
+    reportLocalPlaybackFailure.mockClear()
+    mockedUsePlaybackMode.mockReturnValue({ mode: 'local', setMode, reportLocalPlaybackFailure })
+    mockedUseRemotePlayer.mockReturnValue(remoteResult)
+  })
+
   afterEach(() => {
     mockedUseKeyboardControls.mockClear()
   })
@@ -231,7 +264,7 @@ describe('Player', () => {
     render(<Player accessToken="token" onLogout={vi.fn()} />)
 
     expect(screen.getByText(/Playback stalled/)).toBeInTheDocument()
-    expect(screen.getByText(/widevine-license/)).toBeInTheDocument()
+    expect(screen.getByText(/Widevine DRM/)).toBeInTheDocument()
   })
 
   it('keeps the playlist inside the slot that matches the card height', () => {
@@ -279,5 +312,126 @@ describe('Player', () => {
     render(<Player accessToken="token" onLogout={vi.fn()} />)
 
     expect(mockedUseSpotifyPlaylist).toHaveBeenCalledWith('token', 'spotify:playlist:p1')
+  })
+
+  it('waits for detection before choosing a mode', () => {
+    mockedUsePlaybackMode.mockReturnValue({
+      mode: undefined,
+      setMode,
+      reportLocalPlaybackFailure,
+    })
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    expect(screen.getByText(/Checking what this browser can play/)).toBeInTheDocument()
+  })
+
+  it('leaves the local SDK unconnected while controlling a remote device', () => {
+    mockedUsePlaybackMode.mockReturnValue({ mode: 'remote', setMode, reportLocalPlaybackFailure })
+    mockedUseRemotePlayer.mockReturnValue({
+      ...remoteResult,
+      status: 'ready',
+      playbackState: buildPlaybackState(),
+      activeDeviceName: 'Kitchen speaker',
+      devices: [{ id: 'device-1', name: 'Kitchen speaker', isActive: true }],
+    })
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    // No token means no SDK device is claimed and no DRM licence is sought.
+    expect(mockedUseSpotifyPlayer).toHaveBeenCalledWith(undefined)
+    expect(mockedUseRemotePlayer).toHaveBeenCalledWith('token')
+    expect(screen.getByDisplayValue('Kitchen speaker')).toBeInTheDocument()
+  })
+
+  it('stops polling the Web API while playing in the page', () => {
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    expect(mockedUseRemotePlayer).toHaveBeenCalledWith(undefined)
+    expect(mockedUseSpotifyPlayer).toHaveBeenCalledWith('token')
+  })
+
+  it('drives the remote device from the shared controls', async () => {
+    const togglePlay = vi.fn()
+    mockedUsePlaybackMode.mockReturnValue({ mode: 'remote', setMode, reportLocalPlaybackFailure })
+    mockedUseRemotePlayer.mockReturnValue({
+      ...remoteResult,
+      status: 'ready',
+      playbackState: buildPlaybackState(),
+      togglePlay,
+    })
+    const user = userEvent.setup()
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Pause' }))
+    expect(togglePlay).toHaveBeenCalledOnce()
+  })
+
+  it('asks for a device when none is awake to control', () => {
+    mockedUsePlaybackMode.mockReturnValue({ mode: 'remote', setMode, reportLocalPlaybackFailure })
+    mockedUseRemotePlayer.mockReturnValue({ ...remoteResult, status: 'no-device' })
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    expect(screen.getByText(/No Spotify devices are awake/)).toBeInTheDocument()
+  })
+
+  it('remembers a stall so the device stops defaulting to local playback', () => {
+    mockedUseSpotifyPlayer.mockReturnValue({
+      status: 'ready',
+      playbackState: buildPlaybackState(),
+      togglePlay: vi.fn(),
+      nextTrack: vi.fn(),
+      previousTrack: vi.fn(),
+      seek: vi.fn(),
+      playTrack: vi.fn(),
+      playbackErrorMessage: undefined,
+      isStalled: true,
+    })
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    expect(reportLocalPlaybackFailure).toHaveBeenCalled()
+  })
+
+  it('offers a one-click switch to remote control when playback stalls', async () => {
+    mockedUseSpotifyPlayer.mockReturnValue({
+      status: 'ready',
+      playbackState: buildPlaybackState(),
+      togglePlay: vi.fn(),
+      nextTrack: vi.fn(),
+      previousTrack: vi.fn(),
+      seek: vi.fn(),
+      playTrack: vi.fn(),
+      playbackErrorMessage: undefined,
+      isStalled: true,
+    })
+    const user = userEvent.setup()
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Switch to remote control' }))
+    expect(setMode).toHaveBeenCalledWith('remote')
+  })
+
+  it('switches mode from the toggle', async () => {
+    mockedUseSpotifyPlayer.mockReturnValue({
+      status: 'ready',
+      playbackState: buildPlaybackState(),
+      togglePlay: vi.fn(),
+      nextTrack: vi.fn(),
+      previousTrack: vi.fn(),
+      seek: vi.fn(),
+      playTrack: vi.fn(),
+      playbackErrorMessage: undefined,
+      isStalled: false,
+    })
+    const user = userEvent.setup()
+
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Remote' }))
+    expect(setMode).toHaveBeenCalledWith('remote')
   })
 })

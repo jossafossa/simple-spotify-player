@@ -2,9 +2,27 @@
 
 A browser-only Spotify player using PKCE auth and the Web Playback SDK.
 
+## Two playback modes
+
+The toggle at the top of the player switches between them, and the choice is
+remembered per browser.
+
+- **This browser** — plays in the page through the Web Playback SDK. Needs a
+  browser licensed for Widevine (see below).
+- **Remote** — drives Spotify running somewhere else: phone, desktop, speaker.
+  Nothing is streamed here, so no DRM is involved. Playback state is polled
+  from the Web API, and the device picker moves playback between devices.
+
+The default is chosen per device: the app asks the browser for Widevine up
+front and starts in remote mode when it isn't there. Because an unlicensed
+Widevine build claims support and only fails once a stream stalls, a stall is
+remembered too and moves that device's default to remote — an explicit choice
+from the toggle always wins over both.
+
 ## Requirements
 
-- **Spotify Premium.** The Web Playback SDK refuses to play without it.
+- **Spotify Premium.** Both modes need it: the SDK refuses to play without
+  it, and so do the Web API's playback controls.
 - **A browser with a Widevine DRM licence.** The SDK plays protected content
   through Widevine, and Spotify's licence server refuses anything else with a
   403 on `/v1/widevine-license/…`. Playback then runs for about ten seconds —
@@ -19,7 +37,8 @@ A browser-only Spotify player using PKCE auth and the Web Playback SDK.
     Use Firefox itself or a Chromium browser to listen.
 
   The player detects this: if the SDK reports playing while the position stops
-  advancing, it says so and points at the licence requests in the console.
+  advancing, it says so and offers to switch to remote mode, which needs no
+  DRM at all.
 
 ## Playlist viewer limitations
 

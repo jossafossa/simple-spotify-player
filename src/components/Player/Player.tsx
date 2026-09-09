@@ -1,9 +1,13 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Card } from '~/components/Card'
 import { Controls } from '~/components/Controls'
+import { DeviceSelect } from '~/components/DeviceSelect'
+import { ModeToggle } from '~/components/ModeToggle'
 import { PlaylistPanel } from '~/components/PlaylistPanel'
 import { ProgressBar } from '~/components/ProgressBar'
 import { useKeyboardControls } from '~/hooks/useKeyboardControls'
+import { usePlaybackMode } from '~/hooks/usePlaybackMode'
+import { useRemotePlayer } from '~/hooks/useRemotePlayer'
 import { useSpotifyPlayer } from '~/hooks/useSpotifyPlayer'
 import { useSpotifyPlaylist } from '~/hooks/useSpotifyPlaylist'
 import { useTickingPosition } from '~/hooks/useTickingPosition'
@@ -17,17 +21,18 @@ type PlayerProps = {
 const SEEK_STEP_MS = 5_000
 
 export const Player = ({ accessToken, onLogout }: PlayerProps) => {
-  const {
-    status,
-    playbackState,
-    togglePlay,
-    nextTrack,
-    previousTrack,
-    seek,
-    playTrack,
-    playbackErrorMessage,
-    isStalled,
-  } = useSpotifyPlayer(accessToken)
+  const { mode, setMode, reportLocalPlaybackFailure } = usePlaybackMode()
+
+  // Both hooks always run, and the inactive one is switched off by being
+  // given no token — so no SDK device is claimed while controlling a remote
+  // one, and no polling happens while playing here.
+  const local = useSpotifyPlayer(mode === 'local' ? accessToken : undefined)
+  const remote = useRemotePlayer(mode === 'remote' ? accessToken : undefined)
+
+  const isRemote = mode === 'remote'
+  const player = isRemote ? remote : local
+  const { playbackState, togglePlay, nextTrack, previousTrack, seek, playTrack } = player
+
   const positionMs = useTickingPosition(playbackState)
   const contextUri = playbackState?.contextUri
   const {
@@ -38,6 +43,14 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     contextType: playlistContextType,
     reload: reloadPlaylist,
   } = useSpotifyPlaylist(accessToken, contextUri)
+
+  // A stall means this browser cannot actually stream, so remember it and let
+  // the device default to remote control from now on.
+  useEffect(() => {
+    if (local.isStalled) {
+      reportLocalPlaybackFailure()
+    }
+  }, [local.isStalled, reportLocalPlaybackFailure])
 
   const seekBy = (deltaMs: number) => {
     if (!playbackState) {
@@ -69,26 +82,42 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     [contextUri, playTrack],
   )
 
+  const modeToggle = mode && <ModeToggle mode={mode} onChange={setMode} />
+
   const logoutButton = (
     <button type="button" className={styles.logout} onClick={onLogout}>
       Log out
     </button>
   )
 
-  if (status === 'connecting') {
+  if (!mode) {
     return (
       <Card>
-        <p className={styles.message}>Connecting to Spotify…</p>
+        <p className={styles.message}>Checking what this browser can play…</p>
       </Card>
     )
   }
 
-  if (status === 'error') {
+  if (player.status === 'connecting') {
     return (
       <Card>
+        {modeToggle}
         <p className={styles.message}>
-          Something went wrong. Check that you have Spotify Premium and that
-          your Spotify app's Redirect URI is set up correctly.
+          {isRemote ? 'Looking for your Spotify devices…' : 'Connecting to Spotify…'}
+        </p>
+        {logoutButton}
+      </Card>
+    )
+  }
+
+  if (player.status === 'error') {
+    return (
+      <Card>
+        {modeToggle}
+        <p className={styles.message}>
+          {isRemote
+            ? 'Could not reach Spotify to see what is playing. Check the console for details.'
+            : "Something went wrong. Check that you have Spotify Premium and that your Spotify app's Redirect URI is set up correctly."}
         </p>
         {logoutButton}
       </Card>
@@ -98,10 +127,24 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
   if (!playbackState) {
     return (
       <Card>
-        <p className={styles.message}>
-          Connected. Open Spotify and switch playback to "Spotify Player
-          (web)" to start.
-        </p>
+        {modeToggle}
+        {isRemote ? (
+          <>
+            <DeviceSelect
+              devices={remote.devices}
+              activeDeviceName={remote.activeDeviceName}
+              onSelect={remote.selectDevice}
+            />
+            <p className={styles.message}>
+              Start something playing in Spotify and it will show up here.
+            </p>
+          </>
+        ) : (
+          <p className={styles.message}>
+            Connected. Open Spotify and switch playback to "Spotify Player
+            (web)" to start.
+          </p>
+        )}
         {logoutButton}
       </Card>
     )
@@ -110,6 +153,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
   return (
     <div className={styles.layout}>
       <Card>
+        {modeToggle}
         <img
           className={styles.artwork}
           src={playbackState.track.albumImageUrl}
@@ -132,23 +176,33 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
           onNext={nextTrack}
           onPrevious={previousTrack}
         />
-        {status === 'offline' && (
+        {isRemote && (
+          <DeviceSelect
+            devices={remote.devices}
+            activeDeviceName={remote.activeDeviceName}
+            onSelect={remote.selectDevice}
+          />
+        )}
+        {!isRemote && local.status === 'offline' && (
           <p className={styles.message}>This device went offline — reconnecting…</p>
         )}
-        {playbackErrorMessage && (
+        {!isRemote && local.playbackErrorMessage && (
           <p className={styles.playbackError}>
-            Spotify could not play this track: {playbackErrorMessage}
+            Spotify could not play this track: {local.playbackErrorMessage}
           </p>
         )}
-        {isStalled && (
-          <p className={styles.playbackError}>
-            Playback stalled. Spotify streams through Widevine DRM, so this
-            usually means the browser cannot get a licence — check the console
-            for a failing <code>widevine-license</code> request. Firefox forks
-            such as Zen ship the Widevine plugin without a licence for it, so
-            playback stops a few seconds in; Firefox itself, Chrome or Edge
-            will play.
-          </p>
+        {!isRemote && local.isStalled && (
+          <div className={styles.playbackError}>
+            <p className={styles.stallText}>
+              Playback stalled. Spotify streams through Widevine DRM, and this
+              browser cannot get a licence — Firefox forks such as Zen ship the
+              plugin unlicensed. Play in Firefox itself, Chrome or Edge, or
+              control another device from here.
+            </p>
+            <button type="button" className={styles.switchMode} onClick={() => setMode('remote')}>
+              Switch to remote control
+            </button>
+          </div>
         )}
         <p className={styles.hint}>
           Space to play/pause · ← → to seek · N next · P previous

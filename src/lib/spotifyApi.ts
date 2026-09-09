@@ -207,9 +207,13 @@ export const fetchContextPlaylist = async (
   return fetchPlaylistContext(accessToken, context.id)
 }
 
+/** Targets one device, or whichever device is active when left undefined. */
+const deviceQuery = (deviceId: string | undefined): string =>
+  deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : ''
+
 type PlayTrackInContextParams = {
   accessToken: string
-  deviceId: string
+  deviceId?: string
   contextUri: string
   trackUri: string
 }
@@ -224,9 +228,79 @@ export const playTrackInContext = async ({
   contextUri,
   trackUri,
 }: PlayTrackInContextParams): Promise<void> => {
-  await request(accessToken, `/me/player/play?device_id=${encodeURIComponent(deviceId)}`, {
+  await request(accessToken, `/me/player/play${deviceQuery(deviceId)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ context_uri: contextUri, offset: { uri: trackUri } }),
   })
 }
+
+export type ApiTrackItem = {
+  id?: string | null
+  uri?: string | null
+  name?: string | null
+  duration_ms?: number | null
+  artists?: { name: string }[] | null
+  album?: { name?: string | null; images?: { url: string }[] | null } | null
+}
+
+export type ApiPlaybackState = {
+  is_playing?: boolean | null
+  progress_ms?: number | null
+  context?: { uri?: string | null } | null
+  device?: SpotifyDevice | null
+  item?: ApiTrackItem | null
+}
+
+export type SpotifyDevice = {
+  id?: string | null
+  name?: string | null
+  type?: string | null
+  is_active?: boolean | null
+}
+
+/** Undefined when Spotify answers 204, meaning nothing is playing anywhere. */
+export const fetchPlaybackState = (
+  accessToken: string,
+): Promise<ApiPlaybackState | undefined> =>
+  request<ApiPlaybackState | undefined>(accessToken, '/me/player')
+
+export const fetchDevices = async (accessToken: string): Promise<SpotifyDevice[]> => {
+  const response = await request<{ devices?: SpotifyDevice[] | null }>(
+    accessToken,
+    '/me/player/devices',
+  )
+
+  return response.devices ?? []
+}
+
+export const resumePlayback = (accessToken: string, deviceId?: string): Promise<void> =>
+  request(accessToken, `/me/player/play${deviceQuery(deviceId)}`, { method: 'PUT' })
+
+export const pausePlayback = (accessToken: string, deviceId?: string): Promise<void> =>
+  request(accessToken, `/me/player/pause${deviceQuery(deviceId)}`, { method: 'PUT' })
+
+export const skipToNext = (accessToken: string, deviceId?: string): Promise<void> =>
+  request(accessToken, `/me/player/next${deviceQuery(deviceId)}`, { method: 'POST' })
+
+export const skipToPrevious = (accessToken: string, deviceId?: string): Promise<void> =>
+  request(accessToken, `/me/player/previous${deviceQuery(deviceId)}`, { method: 'POST' })
+
+export const seekToPosition = (
+  accessToken: string,
+  positionMs: number,
+  deviceId?: string,
+): Promise<void> => {
+  const device = deviceId ? `&device_id=${encodeURIComponent(deviceId)}` : ''
+  return request(accessToken, `/me/player/seek?position_ms=${Math.round(positionMs)}${device}`, {
+    method: 'PUT',
+  })
+}
+
+/** Moves playback to another device, keeping whatever is playing. */
+export const transferPlayback = (accessToken: string, deviceId: string): Promise<void> =>
+  request(accessToken, '/me/player', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_ids: [deviceId], play: true }),
+  })

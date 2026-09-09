@@ -63,6 +63,23 @@
   text-align: left;
 }
 
+.stallText {
+  margin: 0 0 8px;
+}
+
+.switchMode {
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--color-text-muted);
+  }
+}
+
 .hint {
   margin: 0;
   font-size: 11px;
