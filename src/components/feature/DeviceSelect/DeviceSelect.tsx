@@ -1,4 +1,4 @@
-import type { RemoteDevice } from '~/hooks/useRemotePlayer'
+import type { RemoteDevice } from '~/lib/types'
 import styles from './DeviceSelect.module.scss'
 
 type DeviceSelectProps = {

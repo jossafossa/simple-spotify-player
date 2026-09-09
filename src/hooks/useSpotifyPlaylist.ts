@@ -5,17 +5,9 @@ import {
   parseContextUri,
   SpotifyRequestError,
 } from '~/lib/spotifyApi'
-import type { Playlist } from '~/lib/types'
+import type { Playlist, PlaylistStatus } from '~/lib/types'
 
-export type SpotifyPlaylistStatus =
-  | 'empty'
-  | 'unsupported'
-  | 'loading'
-  | 'ready'
-  | 'expired'
-  | 'forbidden'
-  | 'inaccessible'
-  | 'error'
+export type SpotifyPlaylistStatus = PlaylistStatus
 
 export type UseSpotifyPlaylistResult = {
   status: SpotifyPlaylistStatus

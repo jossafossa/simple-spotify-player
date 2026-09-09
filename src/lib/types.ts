@@ -28,6 +28,24 @@ export type Playlist = {
   tracks: PlaylistTrack[]
 }
 
+/** A Spotify device that remote playback can be driven from or moved to. */
+export type RemoteDevice = {
+  id: string
+  name: string
+  isActive: boolean
+}
+
+/** How far the tracks of the current playback context have got. */
+export type PlaylistStatus =
+  | 'empty'
+  | 'unsupported'
+  | 'loading'
+  | 'ready'
+  | 'expired'
+  | 'forbidden'
+  | 'inaccessible'
+  | 'error'
+
 /**
  * The controls every playback mode offers, however it reaches Spotify. Each
  * mode's hook adds its own extras on top, so this stays the one declaration of

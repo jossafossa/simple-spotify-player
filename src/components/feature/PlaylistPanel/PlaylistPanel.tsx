@@ -1,11 +1,10 @@
 import { memo, useEffect, useRef } from 'react'
-import type { SpotifyPlaylistStatus } from '~/hooks/useSpotifyPlaylist'
 import { formatTime } from '~/lib/formatTime'
-import type { Playlist } from '~/lib/types'
+import type { Playlist, PlaylistStatus } from '~/lib/types'
 import styles from './PlaylistPanel.module.scss'
 
 type PlaylistPanelProps = {
-  status: SpotifyPlaylistStatus
+  status: PlaylistStatus
   playlist: Playlist | undefined
   errorStatus: number | undefined
   errorReason: string | undefined
@@ -29,7 +28,7 @@ const CONTEXT_NAMES: Record<string, string> = {
 const describeContext = (contextType: string | undefined): string =>
   (contextType && CONTEXT_NAMES[contextType]) ?? 'something else'
 
-const buildMessage = (status: SpotifyPlaylistStatus, contextType: string | undefined): string => {
+const buildMessage = (status: PlaylistStatus, contextType: string | undefined): string => {
   switch (status) {
     case 'empty':
       return 'Play a playlist or album to see its tracks here.'
@@ -51,13 +50,13 @@ const buildMessage = (status: SpotifyPlaylistStatus, contextType: string | undef
 }
 
 /** Failures worth offering a retry for. */
-const RETRYABLE_STATUSES: SpotifyPlaylistStatus[] = ['expired', 'forbidden', 'inaccessible', 'error']
+const RETRYABLE_STATUSES: PlaylistStatus[] = ['expired', 'forbidden', 'inaccessible', 'error']
 
 /**
  * Spotify refusing a context it was never going to share is expected, so those
  * read as plain sentences; only a genuine surprise is worth an HTTP status.
  */
-const UNEXPECTED_STATUSES: SpotifyPlaylistStatus[] = ['expired', 'error']
+const UNEXPECTED_STATUSES: PlaylistStatus[] = ['expired', 'error']
 
 /**
  * Memoised because the progress bar re-renders the player several times a

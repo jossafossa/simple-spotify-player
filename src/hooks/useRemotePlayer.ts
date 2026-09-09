@@ -12,15 +12,11 @@ import {
   transferPlayback,
   type SpotifyDevice,
 } from '~/lib/spotifyApi'
-import type { PlaybackState, PlayerControls } from '~/lib/types'
+import type { PlaybackState, PlayerControls, RemoteDevice } from '~/lib/types'
 
 export type RemotePlayerStatus = 'idle' | 'connecting' | 'ready' | 'no-device' | 'error'
 
-export type RemoteDevice = {
-  id: string
-  name: string
-  isActive: boolean
-}
+export type { RemoteDevice }
 
 export type UseRemotePlayerResult = PlayerControls & {
   status: RemotePlayerStatus

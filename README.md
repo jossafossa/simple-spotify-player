@@ -27,6 +27,21 @@ it a licence, the outcome of the last licence request is remembered too and
 moves that device's default — either way, so a browser that once failed is not
 written off for good. An explicit choice from the toggle always wins over both.
 
+## Component layout
+
+`src/components/` is split by how much each component knows:
+
+- **`ui/`** — `Card`, `Controls`, `ProgressBar`. No Spotify concepts at all; a
+  media transport and a scrubber that would work against any player.
+- **`feature/`** — everything that knows what a playlist, a device, a playback
+  mode or an auth status is. All of these are still presentational: they take
+  props and report events. `Player` is the one exception and the only
+  component that reaches for hooks — it wires the two playback modes, the
+  playlist and the keyboard controls together.
+
+Shared domain types live in `src/lib/types.ts`, so no component imports from
+`src/hooks/`.
+
 ## Requirements
 
 - **Spotify Premium.** Both modes need it: the SDK refuses to play without
