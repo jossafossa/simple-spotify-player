@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { loadSpotifyPlaybackSdk } from '~/lib/loadSpotifyPlaybackSdk'
 import { mapSdkStateToPlaybackState } from '~/lib/mapSdkStateToPlaybackState'
+import { playTrackInContext } from '~/lib/spotifyApi'
 import type { PlaybackState } from '~/lib/types'
 
-export type SpotifyPlayerStatus = 'idle' | 'connecting' | 'ready' | 'error'
+export type SpotifyPlayerStatus = 'idle' | 'connecting' | 'ready' | 'offline' | 'error'
 
 export type UseSpotifyPlayerResult = {
   status: SpotifyPlayerStatus
@@ -12,17 +13,26 @@ export type UseSpotifyPlayerResult = {
   nextTrack: () => void
   previousTrack: () => void
   seek: (positionMs: number) => void
+  playTrack: (contextUri: string, trackUri: string) => void
 }
 
 const PLAYER_NAME = 'Spotify Player (web)'
 
+/**
+ * `player_state_changed` only fires on transitions, and stops arriving
+ * altogether once the device drops out, so the real state is polled too.
+ */
+const STATE_SYNC_INTERVAL_MS = 5_000
+
 export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPlayerResult => {
   const [prevAccessToken, setPrevAccessToken] = useState(accessToken)
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'ready' | 'error'>(
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'ready' | 'offline' | 'error'>(
     'connecting',
   )
   const [playbackState, setPlaybackState] = useState<PlaybackState>()
   const playerRef = useRef<Spotify.Player | undefined>(undefined)
+  const deviceIdRef = useRef<string | undefined>(undefined)
+  const isActivatedRef = useRef(false)
 
   // Reset connection state during render (not in an effect) when the token
   // itself changes, so the stale previous track/status never flashes.
@@ -40,6 +50,8 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     }
 
     let isCancelled = false
+    let syncIntervalId: ReturnType<typeof setInterval> | undefined
+    let detachActivation: (() => void) | undefined
 
     loadSpotifyPlaybackSdk().then(() => {
       if (isCancelled) {
@@ -58,12 +70,19 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
         }
       }
 
-      player.addListener('ready', () => {
+      player.addListener('ready', ({ device_id }) => {
         if (!isCancelled) {
+          deviceIdRef.current = device_id
           setConnectionStatus('ready')
         }
       })
-      player.addListener('not_ready', handleError)
+      // The device going offline is recoverable — the SDK reconnects — so it
+      // must not tear the whole player down the way a fatal error does.
+      player.addListener('not_ready', () => {
+        if (!isCancelled) {
+          setConnectionStatus('offline')
+        }
+      })
       player.addListener('initialization_error', handleError)
       player.addListener('authentication_error', handleError)
       player.addListener('account_error', handleError)
@@ -75,30 +94,90 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
 
       player.connect()
       playerRef.current = player
+
+      // Browsers block the SDK's audio element until the page has had a user
+      // gesture; without this, playback dies a few seconds in and the device
+      // stops answering commands while the progress bar ticks on regardless.
+      const activateOnFirstGesture = () => {
+        if (isActivatedRef.current) {
+          return
+        }
+
+        isActivatedRef.current = true
+        void player.activateElement()
+      }
+
+      document.addEventListener('pointerdown', activateOnFirstGesture)
+      document.addEventListener('keydown', activateOnFirstGesture)
+      detachActivation = () => {
+        document.removeEventListener('pointerdown', activateOnFirstGesture)
+        document.removeEventListener('keydown', activateOnFirstGesture)
+      }
+
+      syncIntervalId = setInterval(() => {
+        player.getCurrentState().then((state) => {
+          if (!isCancelled && state) {
+            setPlaybackState(mapSdkStateToPlaybackState(state))
+          }
+        })
+      }, STATE_SYNC_INTERVAL_MS)
     })
 
     return () => {
       isCancelled = true
+      clearInterval(syncIntervalId)
+      detachActivation?.()
       playerRef.current?.disconnect()
       playerRef.current = undefined
+      deviceIdRef.current = undefined
+      isActivatedRef.current = false
     }
   }, [accessToken])
 
-  const togglePlay = useCallback(() => {
-    void playerRef.current?.togglePlay()
+  /** Unlocks audio playback if a gesture hasn't already done so. */
+  const activate = useCallback(() => {
+    if (isActivatedRef.current) {
+      return
+    }
+
+    isActivatedRef.current = true
+    void playerRef.current?.activateElement()
   }, [])
+
+  const togglePlay = useCallback(() => {
+    activate()
+    void playerRef.current?.togglePlay()
+  }, [activate])
 
   const nextTrack = useCallback(() => {
+    activate()
     void playerRef.current?.nextTrack()
-  }, [])
+  }, [activate])
 
   const previousTrack = useCallback(() => {
+    activate()
     void playerRef.current?.previousTrack()
-  }, [])
+  }, [activate])
 
   const seek = useCallback((positionMs: number) => {
     void playerRef.current?.seek(positionMs)
   }, [])
 
-  return { status, playbackState, togglePlay, nextTrack, previousTrack, seek }
+  // Jumping to an arbitrary track is not something the playback SDK exposes,
+  // so it goes over the Web API against this player's device.
+  const playTrack = useCallback(
+    (contextUri: string, trackUri: string) => {
+      const deviceId = deviceIdRef.current
+
+      if (!accessToken || !deviceId) {
+        return
+      }
+
+      activate()
+      void playTrackInContext({ accessToken, deviceId, contextUri, trackUri })
+    },
+    [accessToken, activate],
+  )
+
+  return { status, playbackState, togglePlay, nextTrack, previousTrack, seek, playTrack }
 }

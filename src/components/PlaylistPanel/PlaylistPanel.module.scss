@@ -1,0 +1,116 @@
+.panel {
+  width: min(340px, 90vw);
+  max-height: min(560px, 80vh);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.count {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.title {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.message {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.tracks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  // Keep the scrollbar off the track rows' hover background.
+  margin-right: -8px;
+  padding-right: 8px;
+}
+
+.track {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-surface-raised);
+  }
+
+  &[aria-current] {
+    .index,
+    .trackName,
+    .duration {
+      color: var(--color-accent);
+    }
+  }
+}
+
+.index {
+  flex: 0 0 20px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.trackText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.trackName,
+.artistNames {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.trackName {
+  font-size: 13px;
+}
+
+.artistNames {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.duration {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}

@@ -8,9 +8,11 @@ const buildSdkState = (
     duration: 200_000,
     paused: false,
     position: 42_000,
+    context: { uri: 'spotify:playlist:p1' },
     track_window: {
       current_track: {
         id: 'track-1',
+        uri: 'spotify:track:track-1',
         name: 'Song Title',
         artists: [{ name: 'Artist One' }, { name: 'Artist Two' }],
         album: {
@@ -23,21 +25,31 @@ const buildSdkState = (
   }) as Spotify.PlaybackState
 
 describe('mapSdkStateToPlaybackState', () => {
-  it('maps track, position and paused state', () => {
+  it('maps track, context, position and paused state', () => {
     const result = mapSdkStateToPlaybackState(buildSdkState())
 
     expect(result).toEqual({
       track: {
         id: 'track-1',
+        uri: 'spotify:track:track-1',
         name: 'Song Title',
         artistNames: ['Artist One', 'Artist Two'],
         albumName: 'Album Name',
         albumImageUrl: 'https://example.com/art.jpg',
         durationMs: 200_000,
       },
+      contextUri: 'spotify:playlist:p1',
       positionMs: 42_000,
       isPaused: false,
     })
+  })
+
+  it('leaves contextUri undefined when playback has no context', () => {
+    const result = mapSdkStateToPlaybackState(
+      buildSdkState({ context: { uri: null } as Spotify.PlaybackContext }),
+    )
+
+    expect(result.contextUri).toBeUndefined()
   })
 
   it('falls back to an empty id when Spotify omits one', () => {
