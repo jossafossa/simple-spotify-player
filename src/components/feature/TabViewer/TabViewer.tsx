@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useAlphaTab } from '~/hooks/useAlphaTab'
 import { useFullPageView } from '~/hooks/useFullPageView'
 import { useTabSync } from '~/hooks/useTabSync'
@@ -68,13 +68,21 @@ export const TabViewer = ({
   const isRenderable = isRenderableFormat(tab.format)
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null)
-  const alphaTab = useAlphaTab({ container, scrollElement }, isRenderable ? data : undefined)
+  // The sync below needs alphaTab, and alphaTab reports clicks to the sync,
+  // so the click is relayed through a ref set once the sync exists.
+  const alignToRef = useRef<(tabTimeMs: number) => void>(() => {})
+  const alphaTab = useAlphaTab({ container, scrollElement }, isRenderable ? data : undefined, {
+    onBeatClick: (tabTimeMs) => alignToRef.current(tabTimeMs),
+  })
   useFullPageView(onClose)
   const sync = useTabSync({
     tabId: tab.id,
     positionMs: spotifyPlayback?.positionMs,
     canSeek: isRenderable && alphaTab.status === 'ready' && alphaTab.isPlayerReady,
     seekTo: alphaTab.seekTo,
+  })
+  useEffect(() => {
+    alignToRef.current = sync.alignTo
   })
   const isFollowing = sync.isEnabled && !!spotifyPlayback
   const isOtherSong = isFollowing && !!song && !isSameSong(song, spotifyPlayback.track)
@@ -232,6 +240,7 @@ export const TabViewer = ({
                 </button>
               </span>
             )}
+            {isFollowing && <span className={styles.syncHint}>Click the note you hear to line up</span>}
             {isOtherSong && (
               <span className={styles.warning} role="status">
                 Spotify is playing another song

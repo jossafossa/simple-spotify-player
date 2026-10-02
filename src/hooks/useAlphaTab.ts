@@ -23,6 +23,17 @@ export type UseAlphaTabResult = {
   seekTo: (positionMs: number) => void
 }
 
+/** How close a reported seek must land to a requested one to count as it. */
+const OWN_SEEK_TOLERANCE_MS = 100
+
+type AlphaTabOptions = {
+  /**
+   * Called with the song time of a beat the user clicked in the score —
+   * alphaTab moves its cursor there.
+   */
+  onBeatClick?: (timeMs: number) => void
+}
+
 type AlphaTabElements = {
   /** Where the notation is drawn. */
   container: HTMLElement | null
@@ -37,6 +48,7 @@ type AlphaTabElements = {
 export const useAlphaTab = (
   { container, scrollElement }: AlphaTabElements,
   data: ArrayBuffer | undefined,
+  { onBeatClick }: AlphaTabOptions = {},
 ): UseAlphaTabResult => {
   // Only ever driven imperatively, never rendered, so a ref rather than state.
   const apiRef = useRef<AlphaTabApi | undefined>(undefined)
@@ -50,6 +62,16 @@ export const useAlphaTab = (
   // alphaTab only scrolls along while its own player plays; a cursor moved
   // from outside has to be followed by hand once the move lands.
   const isSeekingFromOutsideRef = useRef(false)
+  // A click on a beat seeks the player; the next seek to somewhere other than
+  // where this hook last sent it is the user's. Seeks from outside keep
+  // coming several times a second, so one can land between click and seek.
+  const isBeatClickRef = useRef(false)
+  const lastOutsideTargetRef = useRef<number | undefined>(undefined)
+  const onBeatClickRef = useRef(onBeatClick)
+
+  useEffect(() => {
+    onBeatClickRef.current = onBeatClick
+  })
 
   // A new file starts from scratch, during render so the old score's tracks
   // and status never flash against it.
@@ -104,7 +126,20 @@ export const useAlphaTab = (
         instance.playerStateChanged.on((event) => {
           setIsPlaying(event.state === alphaTab.synth.PlayerState.Playing)
         })
-        instance.playerPositionChanged.on(() => {
+        instance.beatMouseDown.on(() => {
+          isBeatClickRef.current = true
+        })
+        instance.playerPositionChanged.on((event) => {
+          const isOwnSeek =
+            lastOutsideTargetRef.current !== undefined &&
+            Math.abs(event.currentTime - lastOutsideTargetRef.current) < OWN_SEEK_TOLERANCE_MS
+
+          if (isBeatClickRef.current && event.isSeek && !isOwnSeek) {
+            isBeatClickRef.current = false
+            onBeatClickRef.current?.(event.currentTime)
+            return
+          }
+
           if (isSeekingFromOutsideRef.current) {
             isSeekingFromOutsideRef.current = false
             instance.scrollToCursor()
@@ -159,6 +194,7 @@ export const useAlphaTab = (
     const api = apiRef.current
     if (api && isPlayerReady) {
       isSeekingFromOutsideRef.current = true
+      lastOutsideTargetRef.current = positionMs
       api.timePosition = positionMs
     }
   }

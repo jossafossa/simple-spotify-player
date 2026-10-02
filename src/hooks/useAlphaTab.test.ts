@@ -22,6 +22,7 @@ class FakeAlphaTabApi {
   playerReady = emitter()
   playerStateChanged = emitter()
   playerPositionChanged = emitter()
+  beatMouseDown = emitter()
   timePosition = 0
   scrollToCursor = vi.fn()
   score = { tracks: [{ index: 0 }, { index: 1 }] }
@@ -54,8 +55,8 @@ const elements = () => ({
 
 const data = new Uint8Array([1, 2]).buffer
 
-const renderReady = async () => {
-  const view = renderHook(({ input }) => useAlphaTab(input.elements, input.data), {
+const renderReady = async (onBeatClick?: (timeMs: number) => void) => {
+  const view = renderHook(({ input }) => useAlphaTab(input.elements, input.data, { onBeatClick }), {
     initialProps: { input: { elements: elements(), data: data as ArrayBuffer | undefined } },
   })
   await waitFor(() => expect(FakeAlphaTabApi.instances).toHaveLength(1))
@@ -167,8 +168,25 @@ describe('useAlphaTab', () => {
     act(() => result.current.seekTo(5_000))
     expect(api.timePosition).toBe(5_000)
 
-    act(() => api.playerPositionChanged.emit())
-    act(() => api.playerPositionChanged.emit())
+    act(() => api.playerPositionChanged.emit({ isSeek: true, currentTime: 5_000 }))
+    act(() => api.playerPositionChanged.emit({ isSeek: true, currentTime: 5_000 }))
     expect(api.scrollToCursor).toHaveBeenCalledOnce()
+  })
+
+  it('reports a clicked beat, even when one of its own seeks lands in between', async () => {
+    const onBeatClick = vi.fn()
+    const { result, api } = await renderReady(onBeatClick)
+    act(() => api.playerReady.emit())
+
+    act(() => result.current.seekTo(20_000))
+    act(() => api.beatMouseDown.emit())
+    act(() => api.playerPositionChanged.emit({ isSeek: true, currentTime: 20_010 }))
+    expect(onBeatClick).not.toHaveBeenCalled()
+
+    act(() => api.playerPositionChanged.emit({ isSeek: true, currentTime: 39_111 }))
+    expect(onBeatClick).toHaveBeenCalledWith(39_111)
+
+    act(() => api.playerPositionChanged.emit({ isSeek: true, currentTime: 50_000 }))
+    expect(onBeatClick).toHaveBeenCalledOnce()
   })
 })

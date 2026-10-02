@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { act, render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAlphaTab, type UseAlphaTabResult } from '~/hooks/useAlphaTab'
@@ -110,7 +110,7 @@ describe('TabViewer', () => {
   it('hands the file to alphaTab', () => {
     renderViewer()
 
-    expect(mockedUseAlphaTab).toHaveBeenLastCalledWith(expect.anything(), data)
+    expect(mockedUseAlphaTab).toHaveBeenLastCalledWith(expect.anything(), data, expect.anything())
   })
 
   it('plays, stops and switches track', async () => {
@@ -165,7 +165,7 @@ describe('TabViewer', () => {
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
     const { getByRole, getByText, queryByRole } = renderViewer({ tab: buildTab('p', 'power-tab') })
 
-    expect(mockedUseAlphaTab).toHaveBeenLastCalledWith(expect.anything(), undefined)
+    expect(mockedUseAlphaTab).toHaveBeenLastCalledWith(expect.anything(), undefined, expect.anything())
     expect(getByText(/open it in TuxGuitar and save it as \.gp5/)).toBeInTheDocument()
     expect(queryByRole('button', { name: 'Play tab' })).not.toBeInTheDocument()
 
@@ -200,6 +200,22 @@ describe('TabViewer', () => {
       expect(result.stop).toHaveBeenCalledOnce()
       expect(result.seekTo).toHaveBeenLastCalledWith(12_000)
       expect(getByRole('button', { name: 'Play tab' })).toBeDisabled()
+      expect(getByRole('group', { name: 'Sync with Spotify' })).toHaveTextContent(
+        'Click the note you hear to line up',
+      )
+    })
+
+    it('aligns to a clicked beat', async () => {
+      const user = userEvent.setup()
+      const result = alphaTabResult()
+      mockedUseAlphaTab.mockReturnValue(result)
+      const { getByRole } = renderViewer({ spotifyPlayback })
+      await user.click(getByRole('checkbox', { name: 'Sync with Spotify' }))
+
+      const { onBeatClick } = mockedUseAlphaTab.mock.lastCall![2]!
+      act(() => onBeatClick!(15_000))
+
+      expect(getByRole('button', { name: 'Offset +3.0 s, click to reset' })).toBeInTheDocument()
     })
 
     it('nudges and resets the offset', async () => {

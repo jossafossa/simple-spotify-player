@@ -87,4 +87,17 @@ describe('useTabSync', () => {
 
     expect(renderSync().result.current.offsetMs).toBe(0)
   })
+
+  it('lines the clicked moment of the tab up with where Spotify is', () => {
+    const { result, seekTo } = renderSync({ positionMs: 20_000, canSeek: true })
+
+    act(() => result.current.alignTo(39_100))
+    expect(result.current.offsetMs).toBe(0)
+
+    act(() => result.current.setEnabled(true))
+    act(() => result.current.alignTo(39_100))
+
+    expect(result.current.offsetMs).toBe(19_100)
+    expect(seekTo).toHaveBeenLastCalledWith(39_100)
+  })
 })
