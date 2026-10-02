@@ -42,6 +42,8 @@ export type UseTabWorkspaceResult = {
   preview: TabPreview | undefined
   previewLibraryTab: (tabId: string) => void
   previewOnlineTab: (tab: OnlineTab) => void
+  /** Opens the song's first tab in the viewer, or closes the viewer when it has none. */
+  showTabFor: (song: SongRef) => void
   /** Back from the preview to the picker it came from. */
   closePreview: () => void
   /** Adds the previewed tab to the song, and goes on showing it as a linked tab. */
@@ -184,6 +186,14 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
     closeLibrary: () => setIsLibraryOpen(false),
     uploadTab,
     deleteTab,
+    showTabFor: (song) => {
+      const firstTabId = songEntryFor(song)?.tabIds[0]
+      if (firstTabId) {
+        openTabInViewer(song, firstTabId)
+      } else {
+        setOpenTabState(undefined)
+      }
+    },
     preview: tabPreview.preview,
     previewLibraryTab: (tabId) => {
       if (pickerSong) {

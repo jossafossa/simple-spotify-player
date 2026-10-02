@@ -191,4 +191,17 @@ describe('useTabWorkspace', () => {
     expect(result.current.preview).toBeUndefined()
     expect(result.current.pickerSong).toEqual(song)
   })
+
+  it('shows a song’s first tab, or closes the viewer for a song without one', async () => {
+    const { result } = await renderWorkspace()
+    act(() => result.current.uploadTab(gpFile(), song))
+    await waitFor(() => expect(result.current.tabCountFor(song)).toBe(1))
+    const other = { uri: 'spotify:track:other', name: 'Amaranth', artistNames: ['Nightwish'] }
+
+    act(() => result.current.showTabFor(song))
+    expect(result.current.openTab?.song?.uri).toBe(song.uri)
+
+    act(() => result.current.showTabFor(other))
+    expect(result.current.openTab).toBeUndefined()
+  })
 })

@@ -78,6 +78,10 @@ Tabs are linked to songs and stored in the browser — no server involved.
   the song, has *Preview*: it opens full page without storing or linking
   anything. *Add to this song* in its top bar adds it (an online file is
   stored from the copy already downloaded); *← Back* returns to the search.
+- **Follows the song** — when the next song starts, an open tab view moves
+  along: to that song's tab if it has one, back to the player if it does not.
+  A tab opened for another song stays until the song changes; a preview stays
+  open regardless.
 - **Sync with Spotify** — optional, off by default: tick *Sync with
   Spotify* in the tab view's bottom bar and the cursor follows the song
   playing in Spotify instead of the tab's own player, scrolling along and

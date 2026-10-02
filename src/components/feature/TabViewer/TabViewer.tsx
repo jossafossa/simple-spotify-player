@@ -3,7 +3,6 @@ import { useAlphaTab } from '~/hooks/useAlphaTab'
 import { useFullPageView } from '~/hooks/useFullPageView'
 import { useTabSync } from '~/hooks/useTabSync'
 import type { TabDataStatus } from '~/hooks/useTabData'
-import { isSameSong } from '~/lib/songMatch'
 import { readTabSettings, saveTabSettings } from '~/lib/tabSettingsStorage'
 import { isRenderableFormat } from '~/lib/tabFormat'
 import type { SongRef, TabFile } from '~/lib/types'
@@ -91,7 +90,6 @@ export const TabViewer = ({
     alignToRef.current = sync.alignTo
   })
   const isFollowing = sync.isEnabled && !!spotifyPlayback
-  const isOtherSong = isFollowing && !!song && !isSameSong(song, spotifyPlayback.track)
 
   const notice = (() => {
     if (dataStatus === 'loading') {
@@ -268,11 +266,6 @@ export const TabViewer = ({
                 </span>
               )}
               {isFollowing && <span className={styles.syncHint}>Click the note you hear to line up</span>}
-              {isOtherSong && (
-                <span className={styles.warning} role="status">
-                  Spotify is playing another song
-                </span>
-              )}
             </div>
           )}
         </div>

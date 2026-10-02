@@ -15,6 +15,7 @@ import { usePlaybackMode } from '~/hooks/usePlaybackMode'
 import { useRemotePlayer } from '~/hooks/useRemotePlayer'
 import { useSpotifyPlayer } from '~/hooks/useSpotifyPlayer'
 import { useSpotifyPlaylist } from '~/hooks/useSpotifyPlaylist'
+import { useTabFollowsPlayback } from '~/hooks/useTabFollowsPlayback'
 import { useTabWorkspace } from '~/hooks/useTabWorkspace'
 import { useTickingPosition } from '~/hooks/useTickingPosition'
 import { useUserPlaylists } from '~/hooks/useUserPlaylists'
@@ -131,6 +132,14 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
 
   const nowPlayingSong = playbackState && songOf(playbackState.track)
   const nowPlayingTabCount = nowPlayingSong ? tabs.tabCountFor(nowPlayingSong) : 0
+
+  useTabFollowsPlayback({
+    playingSong: nowPlayingSong,
+    openSong: tabs.openTab?.song,
+    // A preview is for choosing a tab for one song; it stays open.
+    isViewerOpen: !!tabs.openTab && !tabs.preview,
+    showTabFor: tabs.showTabFor,
+  })
 
   const tabButton = nowPlayingSong && (
     <button
