@@ -70,3 +70,28 @@ export type PlayerControls = {
   volume: number | undefined
   setVolume: (volumePercent: number) => void
 }
+
+/** How a tab file is encoded. Only Guitar Pro files can be drawn and played. */
+export type TabFormat = 'guitar-pro' | 'power-tab'
+
+/** A tab file in the library. Its bytes are stored apart and loaded on demand. */
+export type TabFile = {
+  id: string
+  /** Shown in lists; starts as the file name without its extension. */
+  name: string
+  fileName: string
+  format: TabFormat
+  sizeBytes: number
+  addedAt: number
+}
+
+/** A song with tabs linked to it, kept with enough detail to list it offline. */
+export type TabSong = {
+  uri: string
+  name: string
+  artistNames: string[]
+  tabIds: string[]
+}
+
+/** The bits of a track that linking a tab to it needs. */
+export type SongRef = Pick<TabSong, 'uri' | 'name' | 'artistNames'>

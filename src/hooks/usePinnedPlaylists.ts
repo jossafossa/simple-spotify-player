@@ -1,5 +1,9 @@
-import { useCallback, useState } from 'react'
-import { readPinnedPlaylists, savePinnedPlaylists } from '~/lib/pinnedPlaylistsStorage'
+import { useCallback, useEffect, useState } from 'react'
+import {
+  PINNED_PLAYLISTS_CHANGED_EVENT,
+  readPinnedPlaylists,
+  savePinnedPlaylists,
+} from '~/lib/pinnedPlaylistsStorage'
 import type { PlaylistSummary } from '~/lib/types'
 
 export type UsePinnedPlaylistsResult = {
@@ -11,17 +15,24 @@ export type UsePinnedPlaylistsResult = {
 export const usePinnedPlaylists = (): UsePinnedPlaylistsResult => {
   const [pinned, setPinned] = useState(readPinnedPlaylists)
 
-  // Kept stable so the memoised browser does not re-render as playback ticks.
-  const togglePin = useCallback((playlist: PlaylistSummary) => {
-    setPinned((current) => {
-      const isPinned = current.some((entry) => entry.uri === playlist.uri)
-      const next = isPinned
-        ? current.filter((entry) => entry.uri !== playlist.uri)
-        : [...current, { uri: playlist.uri, name: playlist.name }]
+  useEffect(() => {
+    const syncFromStorage = () => setPinned(readPinnedPlaylists())
 
-      savePinnedPlaylists(next)
-      return next
-    })
+    window.addEventListener(PINNED_PLAYLISTS_CHANGED_EVENT, syncFromStorage)
+    return () => window.removeEventListener(PINNED_PLAYLISTS_CHANGED_EVENT, syncFromStorage)
+  }, [])
+
+  // Kept stable so the memoised browser does not re-render as playback ticks.
+  // Reads storage rather than state so two toggles in one event both count.
+  const togglePin = useCallback((playlist: PlaylistSummary) => {
+    const current = readPinnedPlaylists()
+    const isPinned = current.some((entry) => entry.uri === playlist.uri)
+
+    savePinnedPlaylists(
+      isPinned
+        ? current.filter((entry) => entry.uri !== playlist.uri)
+        : [...current, { uri: playlist.uri, name: playlist.name }],
+    )
   }, [])
 
   return { pinned, togglePin }

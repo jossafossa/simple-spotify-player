@@ -1,6 +1,8 @@
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
 import '@testing-library/jest-dom/vitest'
+// jsdom has no IndexedDB; the tab library is stored there.
+import 'fake-indexeddb/auto'
 
 /** Minimal in-memory Storage, for the parts of jsdom that don't supply one. */
 const createStorage = (): Storage => {

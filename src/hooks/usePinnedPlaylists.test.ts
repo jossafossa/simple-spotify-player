@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { savePinnedPlaylists } from '~/lib/pinnedPlaylistsStorage'
 import { usePinnedPlaylists } from './usePinnedPlaylists'
 
 const STORAGE_KEY = 'spotify-player:pinned-playlists'
@@ -39,6 +40,14 @@ describe('usePinnedPlaylists', () => {
 
     expect(result.current.pinned).toEqual([focus])
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!)).toEqual([focus])
+  })
+
+  it('picks up pins rewritten elsewhere, such as by an import', () => {
+    const { result } = renderHook(() => usePinnedPlaylists())
+
+    act(() => savePinnedPlaylists([focus]))
+
+    expect(result.current.pinned).toEqual([focus])
   })
 
   it('ignores stored pins it cannot read', () => {

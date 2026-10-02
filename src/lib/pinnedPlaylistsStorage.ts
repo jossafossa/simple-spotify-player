@@ -1,6 +1,8 @@
 import type { PlaylistSummary } from './types'
 
 const PINNED_KEY = 'spotify-player:pinned-playlists'
+/** Lets every hook holding the pins catch up when an import rewrites them. */
+export const PINNED_PLAYLISTS_CHANGED_EVENT = 'spotify-player:pinned-playlists-changed'
 
 const isPlaylistSummary = (value: unknown): value is PlaylistSummary =>
   typeof value === 'object' &&
@@ -27,4 +29,6 @@ export const savePinnedPlaylists = (playlists: PlaylistSummary[]): void => {
   } catch {
     // A browser refusing storage only costs the pins on the next visit.
   }
+
+  window.dispatchEvent(new Event(PINNED_PLAYLISTS_CHANGED_EVENT))
 }
