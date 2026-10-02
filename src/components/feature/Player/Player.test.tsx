@@ -49,6 +49,7 @@ const remoteResult = {
   nextTrack: vi.fn(),
   previousTrack: vi.fn(),
   seek: vi.fn(),
+  toggleShuffle: vi.fn(),
   playTrack: vi.fn(),
   volume: 50,
   setVolume: vi.fn(),
@@ -77,6 +78,7 @@ const buildPlaybackState = (overrides: Partial<PlaybackState> = {}): PlaybackSta
   contextUri: undefined,
   positionMs: 30_000,
   isPaused: false,
+  isShuffled: false,
   ...overrides,
 })
 
@@ -100,6 +102,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -121,6 +124,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -146,6 +150,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -170,6 +175,7 @@ describe('Player', () => {
       nextTrack,
       previousTrack,
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -197,6 +203,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek,
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -224,6 +231,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack,
       volume: 50,
       setVolume: vi.fn(),
@@ -266,6 +274,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -287,6 +296,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -308,6 +318,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -332,6 +343,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -424,6 +436,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -445,6 +458,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -468,6 +482,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -492,6 +507,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -517,6 +533,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -545,6 +562,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -568,6 +586,7 @@ describe('Player', () => {
       nextTrack: vi.fn(),
       previousTrack: vi.fn(),
       seek: vi.fn(),
+      toggleShuffle: vi.fn(),
       playTrack: vi.fn(),
       volume: 50,
       setVolume: vi.fn(),
@@ -594,6 +613,7 @@ describe('Player', () => {
         nextTrack: vi.fn(),
         previousTrack: vi.fn(),
         seek: vi.fn(),
+        toggleShuffle: vi.fn(),
         playTrack: vi.fn(),
         volume: 50,
         setVolume: vi.fn(),
@@ -603,6 +623,25 @@ describe('Player', () => {
         ...overrides,
       })
     }
+
+    it('shows shuffle in the transport and binds it to S', async () => {
+      const toggleShuffle = vi.fn()
+      readyLocal({
+        playbackState: buildPlaybackState({ isShuffled: true }),
+        toggleShuffle,
+      })
+      const user = userEvent.setup()
+
+      render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+      const shuffle = screen.getByRole('button', { name: 'Shuffle' })
+      expect(shuffle).toHaveAttribute('aria-pressed', 'true')
+      await user.click(shuffle)
+      expect(toggleShuffle).toHaveBeenCalledOnce()
+
+      mockedUseKeyboardControls.mock.calls.at(-1)![0].onToggleShuffle()
+      expect(toggleShuffle).toHaveBeenCalledTimes(2)
+    })
 
     it('shows a volume slider wired to the player', () => {
       const setVolume = vi.fn()

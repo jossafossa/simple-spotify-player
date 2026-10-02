@@ -8,6 +8,7 @@ import {
   resumePlayback,
   seekToPosition,
   setPlaybackVolume,
+  setShuffle,
   skipToNext,
   skipToPrevious,
   transferPlayback,
@@ -50,6 +51,7 @@ const isSameTrack = (a: PlaybackState | undefined, b: PlaybackState) =>
   a?.track.uri === b.track.uri &&
   a?.positionMs === b.positionMs &&
   a?.isPaused === b.isPaused &&
+  a?.isShuffled === b.isShuffled &&
   a?.contextUri === b.contextUri
 
 const isSameDevices = (a: RemoteDevice[], b: RemoteDevice[]) =>
@@ -204,6 +206,13 @@ export const useRemotePlayer = (accessToken: string | undefined): UseRemotePlaye
     [runCommand],
   )
 
+  const isShuffled = playbackState?.isShuffled ?? false
+
+  const toggleShuffle = useCallback(() => {
+    runCommand((token) => setShuffle({ accessToken: token, isShuffled: !isShuffled }))
+    setPlaybackState((current) => (current ? { ...current, isShuffled: !current.isShuffled } : current))
+  }, [isShuffled, runCommand])
+
   const playTrack = useCallback(
     (contextUri: string, trackUri: string) => {
       runCommand((token) => playTrackInContext({ accessToken: token, contextUri, trackUri }))
@@ -240,6 +249,7 @@ export const useRemotePlayer = (accessToken: string | undefined): UseRemotePlaye
     nextTrack,
     previousTrack,
     seek,
+    toggleShuffle,
     playTrack,
     volume,
     setVolume,

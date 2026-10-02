@@ -16,6 +16,7 @@ const buildPlaybackState = (overrides: Partial<PlaybackState> = {}): PlaybackSta
   contextUri: undefined,
   positionMs: 10_000,
   isPaused: false,
+  isShuffled: false,
   ...overrides,
 })
 

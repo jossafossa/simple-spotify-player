@@ -21,5 +21,6 @@ export const mapApiStateToPlaybackState = (
     contextUri: state?.context?.uri ?? undefined,
     positionMs: state?.progress_ms ?? 0,
     isPaused: !state?.is_playing,
+    isShuffled: !!state?.shuffle_state,
   }
 }

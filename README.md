@@ -53,6 +53,8 @@ Shared domain types live in `src/lib/types.ts`, so no component imports from
   Clicking a track starts it inside that playlist, so the rest of it queues
   up behind. *Now playing* goes back to following playback. The picker is
   there before anything plays as well, so a session can start from it.
+- **Shuffle** — the switch left of the transport, lit in ochre while on.
+  It follows changes made from other Spotify clients as well.
 - **Pins** — the star pins the open playlist. Pinned names sit above the
   picker as one-click shortcuts and are remembered per browser.
 
@@ -64,6 +66,7 @@ Shared domain types live in `src/lib/types.ts`, so no component imports from
 | ← / →     | Seek 5 s         |
 | ↑ / ↓     | Volume ±5        |
 | M         | Mute / unmute    |
+| S         | Shuffle on / off |
 | N / P     | Next / previous  |
 
 ## Requirements

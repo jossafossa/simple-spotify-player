@@ -6,6 +6,7 @@ import {
   fetchUserPlaylists,
   playTrackInContext,
   setPlaybackVolume,
+  setShuffle,
   SpotifyRequestError,
 } from './spotifyApi'
 
@@ -318,5 +319,28 @@ describe('setPlaybackVolume', () => {
     const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit]
     expect(url).toBe('https://api.spotify.com/v1/me/player/volume?volume_percent=42')
     expect(init.method).toBe('PUT')
+  })
+})
+
+describe('setShuffle', () => {
+  it('turns shuffle on for one device', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(emptyResponse()))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await setShuffle({ accessToken: 'token', isShuffled: true, deviceId: 'device-1' })
+
+    const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit]
+    expect(url).toBe('https://api.spotify.com/v1/me/player/shuffle?state=true&device_id=device-1')
+    expect(init.method).toBe('PUT')
+  })
+
+  it('turns shuffle off on the active device', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(emptyResponse()))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await setShuffle({ accessToken: 'token', isShuffled: false })
+
+    const [url] = fetchMock.mock.calls[0]! as unknown as [string]
+    expect(url).toBe('https://api.spotify.com/v1/me/player/shuffle?state=false')
   })
 })

@@ -8,6 +8,7 @@ import {
   resumePlayback,
   seekToPosition,
   setPlaybackVolume,
+  setShuffle,
   skipToNext,
   skipToPrevious,
   transferPlayback,
@@ -23,6 +24,7 @@ vi.mock('~/lib/spotifyApi', () => ({
   skipToPrevious: vi.fn(),
   seekToPosition: vi.fn(),
   setPlaybackVolume: vi.fn(),
+  setShuffle: vi.fn(),
   transferPlayback: vi.fn(),
   playTrackInContext: vi.fn(),
 }))
@@ -54,6 +56,7 @@ describe('useRemotePlayer', () => {
     vi.mocked(seekToPosition).mockResolvedValue(undefined)
     vi.mocked(setPlaybackVolume).mockReset()
     vi.mocked(setPlaybackVolume).mockResolvedValue(undefined)
+    vi.mocked(setShuffle).mockResolvedValue(undefined)
     vi.mocked(transferPlayback).mockResolvedValue(undefined)
     vi.mocked(playTrackInContext).mockResolvedValue(undefined)
     mockedFetchPlaybackState.mockReset()
@@ -208,6 +211,31 @@ describe('useRemotePlayer', () => {
     expect(setPlaybackVolume).not.toHaveBeenCalled()
     await waitFor(() => expect(setPlaybackVolume).toHaveBeenCalledOnce())
     expect(setPlaybackVolume).toHaveBeenCalledWith('a-token', 55)
+  })
+
+  it('toggles shuffle on the active device and shows it at once', async () => {
+    const { result } = renderHook(() => useRemotePlayer('a-token'))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.playbackState?.isShuffled).toBe(false)
+
+    act(() => {
+      result.current.toggleShuffle()
+    })
+
+    expect(setShuffle).toHaveBeenCalledWith({ accessToken: 'a-token', isShuffled: true })
+    expect(result.current.playbackState?.isShuffled).toBe(true)
+  })
+
+  it('follows shuffle changed from another client', async () => {
+    const { result } = renderHook(() => useRemotePlayer('a-token'))
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+
+    mockedFetchPlaybackState.mockResolvedValue({ ...apiState, shuffle_state: true })
+    act(() => {
+      result.current.nextTrack()
+    })
+
+    await waitFor(() => expect(result.current.playbackState?.isShuffled).toBe(true))
   })
 
   it('reports an error when Spotify cannot be reached', async () => {

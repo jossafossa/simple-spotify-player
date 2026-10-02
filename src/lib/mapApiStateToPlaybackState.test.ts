@@ -3,6 +3,7 @@ import { mapApiStateToPlaybackState } from './mapApiStateToPlaybackState'
 
 const apiState = {
   is_playing: true,
+  shuffle_state: true,
   progress_ms: 42_000,
   context: { uri: 'spotify:playlist:p1' },
   device: { id: 'device-1', name: 'Kitchen speaker', is_active: true },
@@ -31,7 +32,12 @@ describe('mapApiStateToPlaybackState', () => {
       contextUri: 'spotify:playlist:p1',
       positionMs: 42_000,
       isPaused: false,
+      isShuffled: true,
     })
+  })
+
+  it('treats a missing shuffle_state as not shuffled', () => {
+    expect(mapApiStateToPlaybackState({ ...apiState, shuffle_state: null })?.isShuffled).toBe(false)
   })
 
   it('treats a missing is_playing as paused', () => {

@@ -9,6 +9,7 @@ export type KeyboardControlHandlers = {
   onVolumeUp: () => void
   onVolumeDown: () => void
   onToggleMute: () => void
+  onToggleShuffle: () => void
 }
 
 const isTypingIntoField = (target: EventTarget | null): boolean =>
@@ -56,6 +57,9 @@ export const useKeyboardControls = (handlers: KeyboardControlHandlers): void => 
           break
         case 'm':
           handlersRef.current.onToggleMute()
+          break
+        case 's':
+          handlersRef.current.onToggleShuffle()
           break
         case 'n':
           handlersRef.current.onNext()

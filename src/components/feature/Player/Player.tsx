@@ -37,8 +37,17 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
 
   const isRemote = mode === 'remote'
   const player = isRemote ? remote : local
-  const { playbackState, togglePlay, nextTrack, previousTrack, seek, playTrack, volume, setVolume } =
-    player
+  const {
+    playbackState,
+    togglePlay,
+    nextTrack,
+    previousTrack,
+    seek,
+    toggleShuffle,
+    playTrack,
+    volume,
+    setVolume,
+  } = player
   const { isMuted, changeVolumeBy, toggleMute } = useVolumeControl(volume, setVolume)
 
   const positionMs = useTickingPosition(playbackState)
@@ -93,6 +102,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     onVolumeUp: () => changeVolumeBy(VOLUME_STEP_PERCENT),
     onVolumeDown: () => changeVolumeBy(-VOLUME_STEP_PERCENT),
     onToggleMute: toggleMute,
+    onToggleShuffle: toggleShuffle,
   })
 
   // Kept stable so ticking the progress bar does not re-render the playlist.
@@ -236,6 +246,8 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
           onTogglePlay={togglePlay}
           onNext={nextTrack}
           onPrevious={previousTrack}
+          isShuffled={playbackState.isShuffled}
+          onToggleShuffle={toggleShuffle}
         />
         {volume !== undefined && (
           <VolumeControl
@@ -274,7 +286,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
           </div>
         )}
         <p className={styles.legend}>
-          Space play/pause · ← → seek · ↑ ↓ volume · M mute · N next · P previous
+          Space play/pause · ← → seek · ↑ ↓ volume · M mute · S shuffle · N next · P previous
         </p>
         {logoutButton}
       </Card>

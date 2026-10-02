@@ -57,3 +57,19 @@
     background: t.$accent-deep;
   }
 }
+
+/** A latching switch beside the transport: hairlined, ochre ink when on. */
+.toggle {
+  flex: 0.8;
+
+  &[aria-pressed='true'] {
+    border-color: t.$accent;
+    background: t.$accent-wash;
+    color: t.$accent;
+
+    &:hover {
+      background: t.$accent-wash-strong;
+      color: t.$accent-bright;
+    }
+  }
+}

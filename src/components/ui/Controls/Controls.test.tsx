@@ -55,4 +55,32 @@ describe('Controls', () => {
     expect(handleNext).toHaveBeenCalledOnce()
     expect(handlePrevious).toHaveBeenCalledOnce()
   })
+
+  it('leaves shuffle out when there is nothing to toggle', () => {
+    render(<Controls isPaused onTogglePlay={vi.fn()} onNext={vi.fn()} onPrevious={vi.fn()} />)
+
+    expect(screen.queryByRole('button', { name: 'Shuffle' })).not.toBeInTheDocument()
+  })
+
+  it('toggles shuffle and shows whether it is on', async () => {
+    const handleToggleShuffle = vi.fn()
+    const user = userEvent.setup()
+
+    render(
+      <Controls
+        isPaused
+        onTogglePlay={vi.fn()}
+        onNext={vi.fn()}
+        onPrevious={vi.fn()}
+        isShuffled
+        onToggleShuffle={handleToggleShuffle}
+      />,
+    )
+
+    const shuffle = screen.getByRole('button', { name: 'Shuffle' })
+    expect(shuffle).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(shuffle)
+    expect(handleToggleShuffle).toHaveBeenCalledOnce()
+  })
 })

@@ -255,6 +255,7 @@ export const playTrackInContext = async ({
 
 export type ApiPlaybackState = {
   is_playing?: boolean | null
+  shuffle_state?: boolean | null
   progress_ms?: number | null
   context?: { uri?: string | null } | null
   device?: SpotifyDevice | null
@@ -314,3 +315,20 @@ export const setPlaybackVolume = (accessToken: string, volumePercent: number): P
   request(accessToken, `/me/player/volume?volume_percent=${Math.round(volumePercent)}`, {
     method: 'PUT',
   })
+
+type SetShuffleParams = {
+  accessToken: string
+  isShuffled: boolean
+  deviceId?: string
+}
+
+/** The playback SDK has no shuffle control, so both modes go through here. */
+export const setShuffle = ({ accessToken, isShuffled, deviceId }: SetShuffleParams): Promise<void> => {
+  const query = new URLSearchParams({ state: String(isShuffled) })
+
+  if (deviceId) {
+    query.set('device_id', deviceId)
+  }
+
+  return request(accessToken, `/me/player/shuffle?${query}`, { method: 'PUT' })
+}

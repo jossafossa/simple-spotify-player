@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSpotifyPlayer } from './useSpotifyPlayer'
 
-import { playTrackInContext, transferPlayback } from '~/lib/spotifyApi'
+import { playTrackInContext, setShuffle, transferPlayback } from '~/lib/spotifyApi'
 
 vi.mock('~/lib/loadSpotifyPlaybackSdk', () => ({
   loadSpotifyPlaybackSdk: () => Promise.resolve(),
@@ -10,6 +10,7 @@ vi.mock('~/lib/loadSpotifyPlaybackSdk', () => ({
 vi.mock('~/lib/spotifyApi', () => ({
   playTrackInContext: vi.fn().mockResolvedValue(undefined),
   transferPlayback: vi.fn().mockResolvedValue(undefined),
+  setShuffle: vi.fn().mockResolvedValue(undefined),
 }))
 
 const mockedPlayTrackInContext = vi.mocked(playTrackInContext)
@@ -323,5 +324,28 @@ describe('useSpotifyPlayer', () => {
 
     await waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(2))
     expect(FakeSpotifyPlayer.instances[1]!.options.volume).toBe(1)
+  })
+
+  it('toggles shuffle on this device over the Web API', async () => {
+    const { result } = renderHook(() => useSpotifyPlayer('a-token'))
+    await waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(1))
+    const player = FakeSpotifyPlayer.instances[0]!
+
+    act(() => {
+      player.emit('ready', { device_id: 'device-1' })
+      player.emit('player_state_changed', { ...buildSdkState(), shuffle: false })
+    })
+    await waitFor(() => expect(result.current.playbackState?.isShuffled).toBe(false))
+
+    act(() => {
+      result.current.toggleShuffle()
+    })
+
+    expect(setShuffle).toHaveBeenCalledWith({
+      accessToken: 'a-token',
+      isShuffled: true,
+      deviceId: 'device-1',
+    })
+    expect(result.current.playbackState?.isShuffled).toBe(true)
   })
 })

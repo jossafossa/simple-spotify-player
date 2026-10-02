@@ -5,10 +5,33 @@ type ControlsProps = {
   onTogglePlay: () => void
   onNext: () => void
   onPrevious: () => void
+  /** The shuffle button only appears when there is something to toggle. */
+  isShuffled?: boolean
+  onToggleShuffle?: () => void
 }
 
-export const Controls = ({ isPaused, onTogglePlay, onNext, onPrevious }: ControlsProps) => (
+export const Controls = ({
+  isPaused,
+  onTogglePlay,
+  onNext,
+  onPrevious,
+  isShuffled = false,
+  onToggleShuffle,
+}: ControlsProps) => (
   <div className={styles.controls}>
+    {onToggleShuffle && (
+      <button
+        type="button"
+        className={`${styles.button} ${styles.toggle}`}
+        onClick={onToggleShuffle}
+        aria-label="Shuffle"
+        aria-pressed={isShuffled}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M14.8 4H20v5.2l-1.9-1.9-3.4 3.4-1.4-1.4 3.4-3.4zM4 5.4 5.4 4 20 18.6 18.6 20zM20 14.8V20h-5.2l1.9-1.9-2.9-2.9 1.4-1.4 2.9 2.9z" />
+        </svg>
+      </button>
+    )}
     <button
       type="button"
       className={styles.button}

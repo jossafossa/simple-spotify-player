@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { loadSpotifyPlaybackSdk } from '~/lib/loadSpotifyPlaybackSdk'
 import { mapSdkStateToPlaybackState } from '~/lib/mapSdkStateToPlaybackState'
-import { playTrackInContext, transferPlayback } from '~/lib/spotifyApi'
+import { playTrackInContext, setShuffle, transferPlayback } from '~/lib/spotifyApi'
 import { watchWidevineLicense } from '~/lib/widevineLicense'
 import { saveLocalPlaybackCapability } from '~/lib/playbackModeStorage'
 import type { PlaybackState, PlayerControls } from '~/lib/types'
@@ -181,6 +181,23 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     void playerRef.current?.seek(positionMs)
   }, [])
 
+  const isShuffled = playbackState?.isShuffled ?? false
+
+  const toggleShuffle = useCallback(() => {
+    const deviceId = deviceIdRef.current
+
+    if (!accessToken || !deviceId) {
+      return
+    }
+
+    // Shown at once; the SDK's next state change confirms or corrects it.
+    setPlaybackState((current) => (current ? { ...current, isShuffled: !isShuffled } : current))
+    setShuffle({ accessToken, isShuffled: !isShuffled, deviceId }).catch((error: unknown) => {
+      console.error('Could not change shuffle', error)
+      setPlaybackState((current) => (current ? { ...current, isShuffled } : current))
+    })
+  }, [accessToken, isShuffled])
+
   const setVolume = useCallback((volumePercent: number) => {
     const clamped = Math.min(Math.max(Math.round(volumePercent), 0), 100)
     volumeRef.current = clamped
@@ -230,6 +247,7 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     nextTrack,
     previousTrack,
     seek,
+    toggleShuffle,
     playTrack,
     volume,
     setVolume,

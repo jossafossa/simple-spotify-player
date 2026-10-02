@@ -8,4 +8,5 @@ export const mapSdkStateToPlaybackState = (
   contextUri: state.context?.uri ?? undefined,
   positionMs: state.position,
   isPaused: state.paused,
+  isShuffled: state.shuffle,
 })

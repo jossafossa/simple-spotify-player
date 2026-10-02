@@ -7,6 +7,7 @@ const buildSdkState = (
   ({
     duration: 200_000,
     paused: false,
+    shuffle: true,
     position: 42_000,
     context: { uri: 'spotify:playlist:p1' },
     track_window: {
@@ -41,6 +42,7 @@ describe('mapSdkStateToPlaybackState', () => {
       contextUri: 'spotify:playlist:p1',
       positionMs: 42_000,
       isPaused: false,
+      isShuffled: true,
     })
   })
 

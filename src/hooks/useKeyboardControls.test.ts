@@ -13,6 +13,7 @@ describe('useKeyboardControls', () => {
     onVolumeUp: vi.fn(),
     onVolumeDown: vi.fn(),
     onToggleMute: vi.fn(),
+    onToggleShuffle: vi.fn(),
   }
 
   beforeEach(() => {
@@ -57,6 +58,15 @@ describe('useKeyboardControls', () => {
     expect(handlers.onVolumeUp).toHaveBeenCalledOnce()
     expect(handlers.onVolumeDown).toHaveBeenCalledOnce()
     expect(handlers.onToggleMute).toHaveBeenCalledOnce()
+  })
+
+  it('toggles shuffle on s', async () => {
+    const user = userEvent.setup()
+    renderHook(() => useKeyboardControls(handlers))
+
+    await user.keyboard('s')
+
+    expect(handlers.onToggleShuffle).toHaveBeenCalledOnce()
   })
 
   it('leaves the arrow keys to a focused select', async () => {

@@ -14,6 +14,7 @@ export type PlaybackState = {
   contextUri: string | undefined
   positionMs: number
   isPaused: boolean
+  isShuffled: boolean
 }
 
 export type PlaylistTrack = {
@@ -63,6 +64,7 @@ export type PlayerControls = {
   nextTrack: () => void
   previousTrack: () => void
   seek: (positionMs: number) => void
+  toggleShuffle: () => void
   playTrack: (contextUri: string, trackUri: string) => void
   /** 0–100, or undefined when the device does not report or support volume. */
   volume: number | undefined
