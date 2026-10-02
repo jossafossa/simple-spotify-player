@@ -31,7 +31,7 @@ const describeContext = (contextType: string | undefined): string =>
 const buildMessage = (status: PlaylistStatus, contextType: string | undefined): string => {
   switch (status) {
     case 'empty':
-      return 'Play a playlist or album to see its tracks here.'
+      return 'Pick a playlist above, or play one in Spotify, to see its tracks here.'
     case 'unsupported':
       return `You're playing ${describeContext(contextType)}, which has no track list to jump around.`
     case 'expired':

@@ -1,4 +1,4 @@
-import type { Playlist, PlaylistTrack } from './types'
+import type { Playlist, PlaylistSummary, PlaylistTrack } from './types'
 
 const API_BASE = 'https://api.spotify.com/v1'
 /** Both listing endpoints cap a page at 50 items. */
@@ -110,37 +110,37 @@ const toPlaylistTrack = (track: ApiTrack | null | undefined): PlaylistTrack | un
   }
 }
 
-const collectPage = <TItem>(
+const collectPage = <TItem, TResult>(
   page: Page<TItem>,
-  toTrack: (item: TItem) => PlaylistTrack | undefined,
-  into: PlaylistTrack[],
+  toResult: (item: TItem) => TResult | undefined,
+  into: TResult[],
 ): void => {
   for (const item of page.items ?? []) {
-    const track = toTrack(item)
+    const result = toResult(item)
 
-    if (track) {
-      into.push(track)
+    if (result) {
+      into.push(result)
     }
   }
 }
 
 /**
- * Reads every page of a track listing. The first page reports the total, so
+ * Reads every page of a listing. The first page reports the total, so
  * the remaining offsets are known up front and can be fetched in batches
  * rather than one round trip at a time. Callers that already hold the first
  * page — an album response embeds it — pass it in rather than asking twice.
  */
-const fetchAllTracks = async <TItem>(
+const fetchAllPages = async <TItem, TResult>(
   accessToken: string,
   buildPath: (offset: number) => string,
-  toTrack: (item: TItem) => PlaylistTrack | undefined,
+  toResult: (item: TItem) => TResult | undefined,
   embeddedFirstPage?: Page<TItem>,
-): Promise<PlaylistTrack[]> => {
+): Promise<TResult[]> => {
   const firstPage =
     embeddedFirstPage ?? (await request<Page<TItem>>(accessToken, buildPath(0)))
   const total = firstPage.total ?? firstPage.items?.length ?? 0
-  const tracks: PlaylistTrack[] = []
-  collectPage(firstPage, toTrack, tracks)
+  const results: TResult[] = []
+  collectPage(firstPage, toResult, results)
 
   const offsets: number[] = []
   for (let offset = PAGE_SIZE; offset < total; offset += PAGE_SIZE) {
@@ -154,11 +154,11 @@ const fetchAllTracks = async <TItem>(
     )
 
     for (const page of batchPages) {
-      collectPage(page, toTrack, tracks)
+      collectPage(page, toResult, results)
     }
   }
 
-  return tracks
+  return results
 }
 
 const fetchPlaylistContext = async (accessToken: string, playlistId: string): Promise<Playlist> => {
@@ -166,7 +166,7 @@ const fetchPlaylistContext = async (accessToken: string, playlistId: string): Pr
     request<{ name?: string | null }>(accessToken, `/playlists/${playlistId}?fields=name`),
     // /tracks was removed for development-mode apps in March 2026; /items is
     // its replacement, and answers 403 rather than 404 when it isn't allowed.
-    fetchAllTracks<ApiPlaylistItem>(
+    fetchAllPages<ApiPlaylistItem, PlaylistTrack>(
       accessToken,
       (offset) =>
         `/playlists/${playlistId}/items?limit=${PAGE_SIZE}&offset=${offset}` +
@@ -186,7 +186,7 @@ const fetchAlbumContext = async (accessToken: string, albumId: string): Promise<
     `/albums/${albumId}`,
   )
 
-  const tracks = await fetchAllTracks<ApiTrack>(
+  const tracks = await fetchAllPages<ApiTrack, PlaylistTrack>(
     accessToken,
     (offset) => `/albums/${albumId}/tracks?limit=${PAGE_SIZE}&offset=${offset}`,
     toPlaylistTrack,
@@ -206,6 +206,24 @@ export const fetchContextPlaylist = async (
 
   return fetchPlaylistContext(accessToken, context.id)
 }
+
+type ApiPlaylistSummary = {
+  uri?: string | null
+  name?: string | null
+}
+
+const toPlaylistSummary = (
+  playlist: ApiPlaylistSummary | null | undefined,
+): PlaylistSummary | undefined =>
+  playlist?.uri ? { uri: playlist.uri, name: playlist.name || 'Untitled playlist' } : undefined
+
+/** Every playlist the user owns or follows, in the order Spotify lists them. */
+export const fetchUserPlaylists = (accessToken: string): Promise<PlaylistSummary[]> =>
+  fetchAllPages<ApiPlaylistSummary | null, PlaylistSummary>(
+    accessToken,
+    (offset) => `/me/playlists?limit=${PAGE_SIZE}&offset=${offset}`,
+    toPlaylistSummary,
+  )
 
 /** Targets one device, or whichever device is active when left undefined. */
 const deviceQuery = (deviceId: string | undefined): string =>
@@ -248,6 +266,8 @@ export type SpotifyDevice = {
   name?: string | null
   type?: string | null
   is_active?: boolean | null
+  /** Null for devices whose volume cannot be controlled, such as some speakers. */
+  volume_percent?: number | null
 }
 
 /** Undefined when Spotify answers 204, meaning nothing is playing anywhere. */
@@ -288,4 +308,9 @@ export const transferPlayback = (accessToken: string, deviceId: string): Promise
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ device_ids: [deviceId], play: true }),
+  })
+
+export const setPlaybackVolume = (accessToken: string, volumePercent: number): Promise<void> =>
+  request(accessToken, `/me/player/volume?volume_percent=${Math.round(volumePercent)}`, {
+    method: 'PUT',
   })

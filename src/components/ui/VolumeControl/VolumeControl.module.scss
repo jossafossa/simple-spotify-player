@@ -1,0 +1,80 @@
+@use '../../theme' as t;
+
+/** A ruled line like the device picker: icon, rail, readout. */
+.wrapper {
+  display: flex;
+  align-items: center;
+  gap: t.$s-3;
+  width: 100%;
+}
+
+.mute {
+  @include t.button-base;
+
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid t.$rule;
+  background: transparent;
+  color: t.$text-muted;
+  transition:
+    border-color 120ms linear,
+    color 120ms linear;
+
+  &:hover {
+    border-color: t.$rule-strong;
+    color: t.$text;
+  }
+
+  &[aria-pressed='true'] {
+    color: t.$danger;
+  }
+}
+
+/** Same rail and ochre fill as the progress bar. */
+.slider {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  margin: 0;
+  appearance: none;
+  border-radius: 0;
+  background: linear-gradient(
+    to right,
+    t.$accent 0 var(--fill),
+    t.$rule-strong var(--fill) 100%
+  );
+  cursor: pointer;
+
+  @include t.focus-ring(4px);
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 10px;
+    height: 14px;
+    border: 0;
+    border-radius: t.$radius-sm;
+    background: t.$text;
+  }
+
+  &::-moz-range-thumb {
+    width: 10px;
+    height: 14px;
+    border: 0;
+    border-radius: t.$radius-sm;
+    background: t.$text;
+  }
+}
+
+.value {
+  @include t.numerals;
+
+  flex: 0 0 3ch;
+  font-size: t.$fs-fine;
+  text-align: right;
+  color: t.$text-faint;
+}

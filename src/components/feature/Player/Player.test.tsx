@@ -6,6 +6,7 @@ import { useSpotifyPlayer } from '~/hooks/useSpotifyPlayer'
 import { usePlaybackMode } from '~/hooks/usePlaybackMode'
 import { useRemotePlayer } from '~/hooks/useRemotePlayer'
 import { useSpotifyPlaylist } from '~/hooks/useSpotifyPlaylist'
+import { useUserPlaylists } from '~/hooks/useUserPlaylists'
 import type { PlaybackState } from '~/lib/types'
 import { Player } from './Player'
 
@@ -20,6 +21,12 @@ vi.mock('~/hooks/usePlaybackMode', () => ({
 }))
 vi.mock('~/hooks/useRemotePlayer', () => ({
   useRemotePlayer: vi.fn(),
+}))
+vi.mock('~/hooks/useUserPlaylists', () => ({
+  useUserPlaylists: vi.fn(() => ({ status: 'ready', playlists: [] })),
+}))
+vi.mock('~/hooks/usePinnedPlaylists', () => ({
+  usePinnedPlaylists: vi.fn(() => ({ pinned: [], togglePin: vi.fn() })),
 }))
 vi.mock('~/hooks/useSpotifyPlaylist', () => ({
   useSpotifyPlaylist: vi.fn(() => ({
@@ -43,6 +50,8 @@ const remoteResult = {
   previousTrack: vi.fn(),
   seek: vi.fn(),
   playTrack: vi.fn(),
+  volume: 50,
+  setVolume: vi.fn(),
   devices: [],
   activeDeviceName: undefined,
   selectDevice: vi.fn(),
@@ -53,6 +62,7 @@ const mockedUseRemotePlayer = vi.mocked(useRemotePlayer)
 const mockedUseSpotifyPlayer = vi.mocked(useSpotifyPlayer)
 const mockedUseKeyboardControls = vi.mocked(useKeyboardControls)
 const mockedUseSpotifyPlaylist = vi.mocked(useSpotifyPlaylist)
+const mockedUseUserPlaylists = vi.mocked(useUserPlaylists)
 
 const buildPlaybackState = (overrides: Partial<PlaybackState> = {}): PlaybackState => ({
   track: {
@@ -91,6 +101,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isLicenseRefused: false,
@@ -110,6 +122,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isLicenseRefused: false,
@@ -133,6 +147,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isLicenseRefused: false,
@@ -155,6 +171,8 @@ describe('Player', () => {
       previousTrack,
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isLicenseRefused: false,
@@ -180,6 +198,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek,
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isLicenseRefused: false,
@@ -205,6 +225,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack,
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isLicenseRefused: false,
@@ -245,6 +267,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: 'Playback of protected content is not enabled.',
       isLicenseRefused: false,
@@ -264,6 +288,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isLicenseRefused: true,
@@ -283,6 +309,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isLicenseRefused: false,
@@ -293,7 +321,7 @@ describe('Player', () => {
     // The slot is what lets a long track list scroll instead of stretching
     // the row past the player card.
     const panel = screen.getByRole('complementary', { name: 'Playlist' })
-    expect(panel.parentElement?.className).toContain('panelSlot')
+    expect(panel.closest('[class*="panelSlot"]')).not.toBeNull()
   })
 
   it('loads the playlist for whatever context is playing', () => {
@@ -305,6 +333,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isLicenseRefused: false,
@@ -395,6 +425,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isLicenseRefused: true,
@@ -414,6 +446,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isLicenseRefused: true,
@@ -435,6 +469,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback: vi.fn(),
       playbackErrorMessage: undefined,
       isLicenseRefused: false,
@@ -457,6 +493,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback,
       playbackErrorMessage: undefined,
       isLicenseRefused: false,
@@ -480,6 +518,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback,
       playbackErrorMessage: undefined,
       isLicenseRefused: false,
@@ -506,6 +546,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback,
       playbackErrorMessage: undefined,
       isLicenseRefused: false,
@@ -527,6 +569,8 @@ describe('Player', () => {
       previousTrack: vi.fn(),
       seek: vi.fn(),
       playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
       claimPlayback,
       playbackErrorMessage: undefined,
       isLicenseRefused: false,
@@ -539,5 +583,98 @@ describe('Player', () => {
 
     expect(setMode).toHaveBeenCalledWith('remote')
     expect(claimPlayback).not.toHaveBeenCalled()
+  })
+
+  describe('volume and browsing', () => {
+    const readyLocal = (overrides: Partial<ReturnType<typeof useSpotifyPlayer>> = {}) => {
+      mockedUseSpotifyPlayer.mockReturnValue({
+        status: 'ready',
+        playbackState: buildPlaybackState({ contextUri: 'spotify:playlist:p1' }),
+        togglePlay: vi.fn(),
+        nextTrack: vi.fn(),
+        previousTrack: vi.fn(),
+        seek: vi.fn(),
+        playTrack: vi.fn(),
+        volume: 50,
+        setVolume: vi.fn(),
+        claimPlayback: vi.fn(),
+        playbackErrorMessage: undefined,
+        isLicenseRefused: false,
+        ...overrides,
+      })
+    }
+
+    it('shows a volume slider wired to the player', () => {
+      const setVolume = vi.fn()
+      readyLocal({ volume: 30, setVolume })
+
+      render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+      expect(screen.getByRole('slider', { name: 'Volume' })).toHaveValue('30')
+    })
+
+    it('hides the volume slider when the device has no volume', () => {
+      readyLocal({ volume: undefined })
+
+      render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+      expect(screen.queryByRole('slider', { name: 'Volume' })).not.toBeInTheDocument()
+    })
+
+    it('registers keyboard controls that step and mute the volume', () => {
+      const setVolume = vi.fn()
+      readyLocal({ volume: 50, setVolume })
+
+      render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+      const handlers = mockedUseKeyboardControls.mock.calls[0]![0]
+      handlers.onVolumeUp()
+      expect(setVolume).toHaveBeenLastCalledWith(55)
+      handlers.onVolumeDown()
+      expect(setVolume).toHaveBeenLastCalledWith(45)
+      handlers.onToggleMute()
+      expect(setVolume).toHaveBeenLastCalledWith(0)
+    })
+
+    it('lists a browsed playlist and starts a track from it', async () => {
+      const playTrack = vi.fn()
+      readyLocal({ playTrack })
+      mockedUseUserPlaylists.mockReturnValue({
+        status: 'ready',
+        playlists: [{ uri: 'spotify:playlist:focus', name: 'Focus' }],
+      })
+      mockedUseSpotifyPlaylist.mockImplementation((_token, contextUri) => ({
+        status: 'ready',
+        playlist:
+          contextUri === 'spotify:playlist:focus'
+            ? {
+                name: 'Focus',
+                tracks: [
+                  { uri: 'spotify:track:calm', name: 'Calm', artistNames: [], durationMs: 1_000 },
+                ],
+              }
+            : { name: 'My Mix', tracks: [] },
+        errorStatus: undefined,
+        errorReason: undefined,
+        contextType: 'playlist',
+        reload: vi.fn(),
+      }))
+      const user = userEvent.setup()
+
+      render(<Player accessToken="token" onLogout={vi.fn()} />)
+      await user.selectOptions(screen.getByRole('combobox', { name: 'Browse' }), 'Focus')
+      await user.click(screen.getByText('Calm'))
+
+      expect(playTrack).toHaveBeenCalledWith('spotify:playlist:focus', 'spotify:track:calm')
+    })
+
+    it('offers the playlist browser while nothing is playing yet', () => {
+      readyLocal({ playbackState: undefined })
+
+      render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+      expect(screen.getByRole('combobox', { name: 'Browse' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Play here' })).toBeInTheDocument()
+    })
   })
 })

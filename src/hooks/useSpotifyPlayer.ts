@@ -22,6 +22,7 @@ export type UseSpotifyPlayerResult = PlayerControls & {
 }
 
 const PLAYER_NAME = 'Spotify Player (web)'
+const INITIAL_VOLUME_PERCENT = 50
 
 export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPlayerResult => {
   const [prevAccessToken, setPrevAccessToken] = useState(accessToken)
@@ -31,6 +32,8 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
   const [playbackState, setPlaybackState] = useState<PlaybackState>()
   const [playbackErrorMessage, setPlaybackErrorMessage] = useState<string>()
   const [isLicenseRefused, setIsLicenseRefused] = useState(false)
+  const [volume, setVolumeState] = useState(INITIAL_VOLUME_PERCENT)
+  const volumeRef = useRef(INITIAL_VOLUME_PERCENT)
   const playerRef = useRef<Spotify.Player | undefined>(undefined)
   const deviceIdRef = useRef<string | undefined>(undefined)
   const isActivatedRef = useRef(false)
@@ -83,7 +86,9 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
       const player = new window.Spotify.Player({
         name: PLAYER_NAME,
         getOAuthToken: (callback) => callback(accessToken),
-        volume: 0.5,
+        // Read from the ref so reconnecting after a token refresh keeps the
+        // level the user chose rather than snapping back to the default.
+        volume: volumeRef.current / 100,
       })
 
       const handleError = () => {
@@ -176,6 +181,13 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     void playerRef.current?.seek(positionMs)
   }, [])
 
+  const setVolume = useCallback((volumePercent: number) => {
+    const clamped = Math.min(Math.max(Math.round(volumePercent), 0), 100)
+    volumeRef.current = clamped
+    setVolumeState(clamped)
+    void playerRef.current?.setVolume(clamped / 100)
+  }, [])
+
   /**
    * Takes playback over from whatever device currently holds it. Only ever
    * called from a user gesture, because the browser will not let the SDK's
@@ -219,6 +231,8 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
     previousTrack,
     seek,
     playTrack,
+    volume,
+    setVolume,
     claimPlayback,
     playbackErrorMessage,
     isLicenseRefused,

@@ -3,7 +3,9 @@ import {
   fetchContextPlaylist,
   isSupportedContext,
   parseContextUri,
+  fetchUserPlaylists,
   playTrackInContext,
+  setPlaybackVolume,
   SpotifyRequestError,
 } from './spotifyApi'
 
@@ -276,5 +278,45 @@ describe('playTrackInContext', () => {
       context_uri: 'spotify:playlist:p1',
       offset: { uri: 'spotify:track:7' },
     })
+  })
+})
+
+describe('fetchUserPlaylists', () => {
+  it('reads every page of the user playlists, skipping unusable entries', async () => {
+    const fetchMock = vi.fn((url: string) => {
+      const offset = Number(new URL(url).searchParams.get('offset'))
+      const items =
+        offset === 0
+          ? [{ uri: 'spotify:playlist:a', name: 'A' }, null, { uri: 'spotify:playlist:b', name: '' }]
+          : [{ uri: 'spotify:playlist:c', name: 'C' }]
+
+      return Promise.resolve(jsonResponse({ total: 51, items }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const playlists = await fetchUserPlaylists('token')
+
+    expect(playlists).toEqual([
+      { uri: 'spotify:playlist:a', name: 'A' },
+      { uri: 'spotify:playlist:b', name: 'Untitled playlist' },
+      { uri: 'spotify:playlist:c', name: 'C' },
+    ])
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      'https://api.spotify.com/v1/me/playlists?limit=50&offset=0',
+      'https://api.spotify.com/v1/me/playlists?limit=50&offset=50',
+    ])
+  })
+})
+
+describe('setPlaybackVolume', () => {
+  it('sets the volume of the active device as a whole percentage', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(emptyResponse()))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await setPlaybackVolume('token', 42.4)
+
+    const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit]
+    expect(url).toBe('https://api.spotify.com/v1/me/player/volume?volume_percent=42')
+    expect(init.method).toBe('PUT')
   })
 })

@@ -27,6 +27,7 @@ class FakeSpotifyPlayer {
   nextTrack = vi.fn().mockResolvedValue(undefined)
   previousTrack = vi.fn().mockResolvedValue(undefined)
   seek = vi.fn().mockResolvedValue(undefined)
+  setVolume = vi.fn().mockResolvedValue(undefined)
   activateElement = vi.fn().mockResolvedValue(undefined)
   getCurrentState = vi.fn().mockResolvedValue(null)
 
@@ -301,5 +302,26 @@ describe('useSpotifyPlayer', () => {
 
     expect(player.disconnect).toHaveBeenCalledOnce()
     expect(result.current.status).toBe('idle')
+  })
+
+  it('sets the volume on the SDK player and keeps it across a reconnect', async () => {
+    const { result, rerender } = renderHook(
+      ({ token }: { token: string }) => useSpotifyPlayer(token),
+      { initialProps: { token: 'a-token' } },
+    )
+    await waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(1))
+    expect(result.current.volume).toBe(50)
+
+    act(() => {
+      result.current.setVolume(120)
+    })
+
+    expect(result.current.volume).toBe(100)
+    expect(FakeSpotifyPlayer.instances[0]!.setVolume).toHaveBeenCalledWith(1)
+
+    rerender({ token: 'b-token' })
+
+    await waitFor(() => expect(FakeSpotifyPlayer.instances).toHaveLength(2))
+    expect(FakeSpotifyPlayer.instances[1]!.options.volume).toBe(1)
   })
 })

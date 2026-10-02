@@ -24,6 +24,18 @@
   inset: 0;
 }
 
+/** Picker and pins on top; the track list takes whatever height is left. */
+.panelColumn {
+  display: flex;
+  flex-direction: column;
+  gap: t.$s-3;
+}
+
+.panelFill {
+  flex: 1;
+  min-height: 0;
+}
+
 /** A square plate, full column width, hairlined rather than rounded. */
 .artwork {
   width: 100%;

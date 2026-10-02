@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { mapApiStateToPlaybackState } from '~/lib/mapApiStateToPlaybackState'
 import {
   fetchDevices,
@@ -7,6 +7,7 @@ import {
   playTrackInContext,
   resumePlayback,
   seekToPosition,
+  setPlaybackVolume,
   skipToNext,
   skipToPrevious,
   transferPlayback,
@@ -34,6 +35,11 @@ const POLL_INTERVAL_MS = 3_000
 const DEVICE_POLL_INTERVAL_MS = 20_000
 /** Spotify needs a moment to apply a command before it reports the result. */
 const COMMAND_SETTLE_MS = 400
+/**
+ * Dragging the volume slider fires a change per pixel; only the level it comes
+ * to rest on is sent, so a drag costs one request instead of dozens.
+ */
+const VOLUME_SEND_DELAY_MS = 150
 
 const toRemoteDevice = (device: SpotifyDevice): RemoteDevice[] =>
   device.id
@@ -63,6 +69,10 @@ export const useRemotePlayer = (accessToken: string | undefined): UseRemotePlaye
   const [playbackState, setPlaybackState] = useState<PlaybackState>()
   const [devices, setDevices] = useState<RemoteDevice[]>([])
   const [activeDeviceName, setActiveDeviceName] = useState<string>()
+  const [volume, setVolumeState] = useState<number>()
+  // While a volume change is waiting to be sent, a poll still reports the old
+  // level; ignoring it stops the slider jumping back under the user's hand.
+  const pendingVolumeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   // Bumped to re-run the poll effect, which is also what re-arms its timer —
   // so a refresh after a command replaces the next tick instead of adding one.
   const [refreshKey, setRefreshKey] = useState(0)
@@ -73,6 +83,7 @@ export const useRemotePlayer = (accessToken: string | undefined): UseRemotePlaye
     setPlaybackState(undefined)
     setDevices([])
     setActiveDeviceName(undefined)
+    setVolumeState(undefined)
   }
 
   useEffect(() => {
@@ -96,6 +107,10 @@ export const useRemotePlayer = (accessToken: string | undefined): UseRemotePlaye
             current && isSameTrack(previous, current) ? previous : current,
           )
           setActiveDeviceName(state?.device?.name ?? undefined)
+
+          if (!pendingVolumeTimerRef.current) {
+            setVolumeState(state?.device?.volume_percent ?? undefined)
+          }
           // A device has to be awake and selected before it can be driven.
           setStatus(state?.device?.id ? 'ready' : 'no-device')
         })
@@ -196,6 +211,21 @@ export const useRemotePlayer = (accessToken: string | undefined): UseRemotePlaye
     [runCommand],
   )
 
+  const setVolume = useCallback(
+    (volumePercent: number) => {
+      const clamped = Math.min(Math.max(Math.round(volumePercent), 0), 100)
+      setVolumeState(clamped)
+      clearTimeout(pendingVolumeTimerRef.current)
+      pendingVolumeTimerRef.current = setTimeout(() => {
+        pendingVolumeTimerRef.current = undefined
+        runCommand((token) => setPlaybackVolume(token, clamped))
+      }, VOLUME_SEND_DELAY_MS)
+    },
+    [runCommand],
+  )
+
+  useEffect(() => () => clearTimeout(pendingVolumeTimerRef.current), [])
+
   const selectDevice = useCallback(
     (deviceId: string) => {
       runCommand((token) => transferPlayback(token, deviceId))
@@ -211,6 +241,8 @@ export const useRemotePlayer = (accessToken: string | undefined): UseRemotePlaye
     previousTrack,
     seek,
     playTrack,
+    volume,
+    setVolume,
     devices,
     activeDeviceName,
     selectDevice,

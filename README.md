@@ -42,6 +42,30 @@ written off for good. An explicit choice from the toggle always wins over both.
 Shared domain types live in `src/lib/types.ts`, so no component imports from
 `src/hooks/`.
 
+## Volume, browsing and pins
+
+- **Volume** — a slider under the transport, plus a mute button. In remote
+  mode it drives the device's own volume and hides itself for devices that
+  cannot change it; slider drags are sent once they settle, not per pixel.
+  Muting is a volume of zero, so other Spotify clients see it too; unmuting
+  restores the level from before.
+- **Browse** — the picker above the track list opens any of your playlists.
+  Clicking a track starts it inside that playlist, so the rest of it queues
+  up behind. *Now playing* goes back to following playback. The picker is
+  there before anything plays as well, so a session can start from it.
+- **Pins** — the star pins the open playlist. Pinned names sit above the
+  picker as one-click shortcuts and are remembered per browser.
+
+### Keyboard
+
+| Key       | Action           |
+| --------- | ---------------- |
+| Space     | Play / pause     |
+| ← / →     | Seek 5 s         |
+| ↑ / ↓     | Volume ±5        |
+| M         | Mute / unmute    |
+| N / P     | Next / previous  |
+
 ## Requirements
 
 - **Spotify Premium.** Both modes need it: the SDK refuses to play without
@@ -67,7 +91,7 @@ Shared domain types live in `src/lib/types.ts`, so no component imports from
 ## Playlist viewer limitations
 
 The side panel lists the tracks of the playlist or album playback is coming
-from, and clicking one jumps to it. Two things it cannot show, both by
+from — or of the playlist picked in the browser — and clicking one jumps to it. Two things it cannot show, both by
 Spotify's design rather than a bug here:
 
 - **Playlists you don't own or collaborate on.** Since the

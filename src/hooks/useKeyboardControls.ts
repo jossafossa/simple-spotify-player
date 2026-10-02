@@ -6,11 +6,15 @@ export type KeyboardControlHandlers = {
   onPrevious: () => void
   onSeekBackward: () => void
   onSeekForward: () => void
+  onVolumeUp: () => void
+  onVolumeDown: () => void
+  onToggleMute: () => void
 }
 
 const isTypingIntoField = (target: EventTarget | null): boolean =>
   target instanceof HTMLElement &&
-  (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')
+  // A focused select or slider already answers the arrow keys itself.
+  (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')
 
 /**
  * Keeps the latest handlers in a ref so the listener is registered once,
@@ -41,6 +45,17 @@ export const useKeyboardControls = (handlers: KeyboardControlHandlers): void => 
         case 'ArrowLeft':
           event.preventDefault()
           handlersRef.current.onSeekBackward()
+          break
+        case 'ArrowUp':
+          event.preventDefault()
+          handlersRef.current.onVolumeUp()
+          break
+        case 'ArrowDown':
+          event.preventDefault()
+          handlersRef.current.onVolumeDown()
+          break
+        case 'm':
+          handlersRef.current.onToggleMute()
           break
         case 'n':
           handlersRef.current.onNext()

@@ -1,0 +1,88 @@
+@use '../../theme' as t;
+
+.browser {
+  display: flex;
+  flex-direction: column;
+  gap: t.$s-3;
+}
+
+/** Pinned names as a run of tabs: hairlined, the open one in ochre. */
+.pins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: t.$s-1;
+}
+
+.pin {
+  @include t.button-ghost;
+
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: t.$fs-fine;
+  font-weight: 500;
+  padding: t.$s-1 t.$s-2;
+
+  &[aria-current] {
+    border-color: t.$accent;
+    background: t.$accent-wash;
+    color: t.$accent;
+  }
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: t.$s-2;
+}
+
+.field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: t.$s-3;
+}
+
+.label {
+  @include t.micro-label;
+
+  flex: 0 0 auto;
+  color: t.$text-faint;
+}
+
+.select {
+  flex: 1;
+  min-width: 0;
+  padding: t.$s-2;
+  border: 1px solid t.$rule;
+  border-radius: t.$radius-sm;
+  background: t.$ink-well;
+  color: t.$text;
+  font-family: t.$sans;
+  font-size: t.$fs-small;
+  cursor: pointer;
+
+  @include t.focus-ring(1px);
+
+  &:hover {
+    border-color: t.$rule-strong;
+  }
+}
+
+.pinToggle {
+  @include t.button-ghost;
+
+  flex: 0 0 auto;
+  padding: t.$s-1 t.$s-2;
+  font-size: t.$fs-body;
+  letter-spacing: 0;
+
+  &[aria-pressed='true'] {
+    border-color: t.$accent;
+    color: t.$accent;
+  }
+}

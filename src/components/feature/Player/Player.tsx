@@ -1,16 +1,21 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { DeviceSelect } from '~/components/feature/DeviceSelect'
 import { ModeToggle } from '~/components/feature/ModeToggle'
+import { PlaylistBrowser } from '~/components/feature/PlaylistBrowser'
 import { PlaylistPanel } from '~/components/feature/PlaylistPanel'
 import { Card } from '~/components/ui/Card'
 import { Controls } from '~/components/ui/Controls'
 import { ProgressBar } from '~/components/ui/ProgressBar'
+import { VolumeControl } from '~/components/ui/VolumeControl'
 import { useKeyboardControls } from '~/hooks/useKeyboardControls'
+import { usePinnedPlaylists } from '~/hooks/usePinnedPlaylists'
 import { usePlaybackMode } from '~/hooks/usePlaybackMode'
 import { useRemotePlayer } from '~/hooks/useRemotePlayer'
 import { useSpotifyPlayer } from '~/hooks/useSpotifyPlayer'
 import { useSpotifyPlaylist } from '~/hooks/useSpotifyPlaylist'
 import { useTickingPosition } from '~/hooks/useTickingPosition'
+import { useUserPlaylists } from '~/hooks/useUserPlaylists'
+import { useVolumeControl } from '~/hooks/useVolumeControl'
 import styles from './Player.module.scss'
 
 type PlayerProps = {
@@ -19,6 +24,7 @@ type PlayerProps = {
 }
 
 const SEEK_STEP_MS = 5_000
+const VOLUME_STEP_PERCENT = 5
 
 export const Player = ({ accessToken, onLogout }: PlayerProps) => {
   const { mode, setMode, reportLocalPlaybackFailure } = usePlaybackMode()
@@ -31,10 +37,19 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
 
   const isRemote = mode === 'remote'
   const player = isRemote ? remote : local
-  const { playbackState, togglePlay, nextTrack, previousTrack, seek, playTrack } = player
+  const { playbackState, togglePlay, nextTrack, previousTrack, seek, playTrack, volume, setVolume } =
+    player
+  const { isMuted, changeVolumeBy, toggleMute } = useVolumeControl(volume, setVolume)
 
   const positionMs = useTickingPosition(playbackState)
   const contextUri = playbackState?.contextUri
+
+  // Undefined means the panel follows playback; picking a playlist pins the
+  // panel to it until "Now playing" is picked again.
+  const [browsedUri, setBrowsedUri] = useState<string>()
+  const shownUri = browsedUri ?? contextUri
+  const { status: userPlaylistsStatus, playlists: userPlaylists } = useUserPlaylists(accessToken)
+  const { pinned, togglePin } = usePinnedPlaylists()
   const {
     status: playlistStatus,
     playlist,
@@ -42,7 +57,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     errorReason: playlistErrorReason,
     contextType: playlistContextType,
     reload: reloadPlaylist,
-  } = useSpotifyPlaylist(accessToken, contextUri)
+  } = useSpotifyPlaylist(accessToken, shownUri)
 
   // Taking playback off another device is always its own decision, never a
   // side effect of choosing a mode: switching to this browser readies the
@@ -75,16 +90,46 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     onPrevious: previousTrack,
     onSeekBackward: () => seekBy(-SEEK_STEP_MS),
     onSeekForward: () => seekBy(SEEK_STEP_MS),
+    onVolumeUp: () => changeVolumeBy(VOLUME_STEP_PERCENT),
+    onVolumeDown: () => changeVolumeBy(-VOLUME_STEP_PERCENT),
+    onToggleMute: toggleMute,
   })
 
   // Kept stable so ticking the progress bar does not re-render the playlist.
   const handleSelectTrack = useCallback(
     (trackUri: string) => {
-      if (contextUri) {
-        playTrack(contextUri, trackUri)
+      if (shownUri) {
+        playTrack(shownUri, trackUri)
       }
     },
-    [contextUri, playTrack],
+    [shownUri, playTrack],
+  )
+
+  const playlistColumn = (
+    <div className={styles.panelSlot}>
+      <div className={styles.panelColumn}>
+        <PlaylistBrowser
+          playlists={userPlaylists}
+          isLoading={userPlaylistsStatus === 'loading'}
+          pinned={pinned}
+          selectedUri={browsedUri}
+          onSelect={setBrowsedUri}
+          onTogglePin={togglePin}
+        />
+        <div className={styles.panelFill}>
+          <PlaylistPanel
+            status={playlistStatus}
+            playlist={playlist}
+            errorStatus={playlistErrorStatus}
+            errorReason={playlistErrorReason}
+            contextType={playlistContextType}
+            currentTrackUri={playbackState?.track.uri}
+            onSelectTrack={handleSelectTrack}
+            onReload={reloadPlaylist}
+          />
+        </div>
+      </div>
+    </div>
   )
 
   const modeToggle = mode && <ModeToggle mode={mode} onChange={setMode} />
@@ -131,34 +176,37 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
 
   if (!playbackState) {
     return (
-      <Card>
-        {modeToggle}
-        {isRemote ? (
-          <>
-            <DeviceSelect
-              devices={remote.devices}
-              activeDeviceName={remote.activeDeviceName}
-              onSelect={remote.selectDevice}
-            />
-            <p className={styles.message}>
-              Start something playing in Spotify and it will show up here.
-            </p>
-          </>
-        ) : (
-          <>
-            <p className={styles.message}>
-              Connected as "Spotify Player (web)". Nothing is playing here yet.
-            </p>
-            <button type="button" className={styles.claim} onClick={claimPlayback}>
-              Play here
-            </button>
-            <p className={styles.hint}>
-              Moves playback off whichever device holds it right now.
-            </p>
-          </>
-        )}
-        {logoutButton}
-      </Card>
+      <div className={styles.layout}>
+        <Card>
+          {modeToggle}
+          {isRemote ? (
+            <>
+              <DeviceSelect
+                devices={remote.devices}
+                activeDeviceName={remote.activeDeviceName}
+                onSelect={remote.selectDevice}
+              />
+              <p className={styles.message}>
+                Start something playing in Spotify and it will show up here.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className={styles.message}>
+                Connected as "Spotify Player (web)". Nothing is playing here yet.
+              </p>
+              <button type="button" className={styles.claim} onClick={claimPlayback}>
+                Play here
+              </button>
+              <p className={styles.hint}>
+                Moves playback off whichever device holds it right now.
+              </p>
+            </>
+          )}
+          {logoutButton}
+        </Card>
+        {playlistColumn}
+      </div>
     )
   }
 
@@ -189,6 +237,14 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
           onNext={nextTrack}
           onPrevious={previousTrack}
         />
+        {volume !== undefined && (
+          <VolumeControl
+            volumePercent={volume}
+            isMuted={isMuted}
+            onChange={setVolume}
+            onToggleMute={toggleMute}
+          />
+        )}
         {isRemote && (
           <DeviceSelect
             devices={remote.devices}
@@ -218,22 +274,11 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
           </div>
         )}
         <p className={styles.legend}>
-          Space to play/pause · ← → to seek · N next · P previous
+          Space play/pause · ← → seek · ↑ ↓ volume · M mute · N next · P previous
         </p>
         {logoutButton}
       </Card>
-      <div className={styles.panelSlot}>
-        <PlaylistPanel
-          status={playlistStatus}
-          playlist={playlist}
-          errorStatus={playlistErrorStatus}
-          errorReason={playlistErrorReason}
-          contextType={playlistContextType}
-          currentTrackUri={playbackState.track.uri}
-          onSelectTrack={handleSelectTrack}
-          onReload={reloadPlaylist}
-        />
-      </div>
+      {playlistColumn}
     </div>
   )
 }

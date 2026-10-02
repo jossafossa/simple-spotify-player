@@ -7,6 +7,7 @@ import {
   playTrackInContext,
   resumePlayback,
   seekToPosition,
+  setPlaybackVolume,
   skipToNext,
   skipToPrevious,
   transferPlayback,
@@ -21,6 +22,7 @@ vi.mock('~/lib/spotifyApi', () => ({
   skipToNext: vi.fn(),
   skipToPrevious: vi.fn(),
   seekToPosition: vi.fn(),
+  setPlaybackVolume: vi.fn(),
   transferPlayback: vi.fn(),
   playTrackInContext: vi.fn(),
 }))
@@ -32,7 +34,7 @@ const apiState = {
   is_playing: true,
   progress_ms: 10_000,
   context: { uri: 'spotify:playlist:p1' },
-  device: { id: 'device-1', name: 'Kitchen speaker', is_active: true },
+  device: { id: 'device-1', name: 'Kitchen speaker', is_active: true, volume_percent: 30 },
   item: {
     id: 'track-1',
     uri: 'spotify:track:track-1',
@@ -50,6 +52,8 @@ describe('useRemotePlayer', () => {
     vi.mocked(skipToNext).mockResolvedValue(undefined)
     vi.mocked(skipToPrevious).mockResolvedValue(undefined)
     vi.mocked(seekToPosition).mockResolvedValue(undefined)
+    vi.mocked(setPlaybackVolume).mockReset()
+    vi.mocked(setPlaybackVolume).mockResolvedValue(undefined)
     vi.mocked(transferPlayback).mockResolvedValue(undefined)
     vi.mocked(playTrackInContext).mockResolvedValue(undefined)
     mockedFetchPlaybackState.mockReset()
@@ -172,6 +176,38 @@ describe('useRemotePlayer', () => {
     })
 
     expect(transferPlayback).toHaveBeenCalledWith('a-token', 'device-2')
+  })
+
+  it('reads the volume of the active device', async () => {
+    const { result } = renderHook(() => useRemotePlayer('a-token'))
+
+    await waitFor(() => expect(result.current.volume).toBe(30))
+  })
+
+  it('reports no volume for a device that cannot change it', async () => {
+    mockedFetchPlaybackState.mockResolvedValue({
+      ...apiState,
+      device: { ...apiState.device, volume_percent: null },
+    })
+    const { result } = renderHook(() => useRemotePlayer('a-token'))
+
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.volume).toBeUndefined()
+  })
+
+  it('shows a volume change at once but only sends where it comes to rest', async () => {
+    const { result } = renderHook(() => useRemotePlayer('a-token'))
+    await waitFor(() => expect(result.current.volume).toBe(30))
+
+    act(() => {
+      result.current.setVolume(40)
+      result.current.setVolume(55)
+    })
+
+    expect(result.current.volume).toBe(55)
+    expect(setPlaybackVolume).not.toHaveBeenCalled()
+    await waitFor(() => expect(setPlaybackVolume).toHaveBeenCalledOnce())
+    expect(setPlaybackVolume).toHaveBeenCalledWith('a-token', 55)
   })
 
   it('reports an error when Spotify cannot be reached', async () => {

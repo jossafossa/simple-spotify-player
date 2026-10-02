@@ -28,7 +28,7 @@ describe('PlaylistPanel', () => {
       />,
     )
 
-    expect(screen.getByText(/Play a playlist or album to see its tracks/)).toBeInTheDocument()
+    expect(screen.getByText(/Pick a playlist above, or play one in Spotify/)).toBeInTheDocument()
   })
 
   it('explains when the context cannot be listed', () => {
