@@ -74,6 +74,10 @@ Tabs are linked to songs and stored in the browser — no server involved.
   (with a following cursor), separately from Spotify; pick another instrument
   track or another tab on the song; and Spotify's own play/previous/next to
   play along. *← Back to player* (or Escape) returns.
+- **Preview** — every free online result, and every library tab not yet on
+  the song, has *Preview*: it opens full page without storing or linking
+  anything. *Add to this song* in its top bar adds it (an online file is
+  stored from the copy already downloaded); *← Back* returns to the search.
 - **Sync with Spotify** — optional, off by default: tick *Sync with
   Spotify* in the tab view's bottom bar and the cursor follows the song
   playing in Spotify instead of the tab's own player, scrolling along and

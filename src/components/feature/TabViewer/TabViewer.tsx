@@ -21,6 +21,8 @@ type TabViewerProps = {
   playbackControls?: ReactNode
   /** Where Spotify is in its song, for the cursor to follow when sync is on. */
   spotifyPlayback?: SpotifyPlayback
+  /** Set while the tab is only being previewed, not yet on the song. */
+  preview?: { onAdd: () => void; isAdding: boolean }
   onSelectTab: (tabId: string) => void
   onManage: (() => void) | undefined
   onClose: () => void
@@ -62,6 +64,7 @@ export const TabViewer = ({
   songTabs,
   playbackControls,
   spotifyPlayback,
+  preview,
   onSelectTab,
   onManage,
   onClose,
@@ -95,8 +98,14 @@ export const TabViewer = ({
       return 'Opening the file…'
     }
 
-    if (dataStatus === 'missing' || dataStatus === 'error') {
+    if (dataStatus === 'missing') {
       return 'This tab file could not be read from the library.'
+    }
+
+    if (dataStatus === 'error') {
+      return preview
+        ? 'This tab could not be downloaded to preview. Try again, or open it on its site.'
+        : 'This tab file could not be read from the library.'
     }
 
     if (!isRenderable) {
@@ -121,18 +130,32 @@ export const TabViewer = ({
           type="button"
           className={styles.back}
           onClick={onClose}
-          title="Back to player (Esc)"
+          title={preview ? 'Back to the search (Esc)' : 'Back to player (Esc)'}
         >
-          ← Back to player
+          {preview ? '← Back' : '← Back to player'}
         </button>
         <div className={styles.heading}>
           <h2 className={styles.title}>{alphaTab.title ?? tab.name}</h2>
           {song && (
             <p className={styles.song}>
+              {preview ? 'Preview for ' : ''}
               {song.name} — {song.artistNames.join(', ')}
             </p>
           )}
         </div>
+        {preview && (
+          <button
+            type="button"
+            className={styles.primary}
+            onClick={(event) => {
+              event.currentTarget.blur()
+              preview.onAdd()
+            }}
+            disabled={preview.isAdding || dataStatus !== 'ready'}
+          >
+            {preview.isAdding ? 'Adding…' : 'Add to this song'}
+          </button>
+        )}
       </header>
 
       <main className={styles.stage}>

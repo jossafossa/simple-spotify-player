@@ -15,6 +15,11 @@ type TabDialogsProps = {
 export const TabDialogs = ({ workspace, onPlaySong }: TabDialogsProps) => {
   const { library, backup, pickerSong } = workspace
 
+  // The preview covers the page; the picker it came from waits underneath.
+  if (workspace.preview) {
+    return null
+  }
+
   if (pickerSong) {
     // The picker's song is already resolved to its library entry, if it has one.
     const linkedTabIds = library.songs.find((song) => song.uri === pickerSong.uri)?.tabIds ?? []
@@ -29,6 +34,7 @@ export const TabDialogs = ({ workspace, onPlaySong }: TabDialogsProps) => {
         onUnlink={(tabId) => void library.unlinkTab(pickerSong.uri, tabId)}
         onUpload={(file) => workspace.uploadTab(file, pickerSong)}
         onOpen={(tabId) => workspace.openTabInViewer(pickerSong, tabId)}
+        onPreview={workspace.previewLibraryTab}
         onClose={workspace.closePicker}
         onlineSearch={
           <OnlineTabSearch
@@ -41,6 +47,7 @@ export const TabDialogs = ({ workspace, onPlaySong }: TabDialogsProps) => {
             addedIds={workspace.online.addedIds}
             onSearch={workspace.online.search}
             onAdd={workspace.online.addOnlineTab}
+            onPreview={workspace.previewOnlineTab}
           />
         }
       />
@@ -76,7 +83,26 @@ type TabViewerSlotProps = {
 }
 
 export const TabViewerSlot = ({ workspace, playbackControls, spotifyPlayback }: TabViewerSlotProps) => {
-  const { openTab } = workspace
+  const { openTab, preview } = workspace
+
+  if (preview) {
+    return (
+      <TabViewer
+        key={preview.tab.id}
+        tab={preview.tab}
+        data={preview.data}
+        dataStatus={preview.dataStatus}
+        song={preview.song}
+        songTabs={[]}
+        playbackControls={playbackControls}
+        spotifyPlayback={spotifyPlayback}
+        preview={{ onAdd: workspace.addPreviewed, isAdding: preview.isAdding }}
+        onSelectTab={() => {}}
+        onManage={undefined}
+        onClose={workspace.closePreview}
+      />
+    )
+  }
 
   if (!openTab) {
     return null

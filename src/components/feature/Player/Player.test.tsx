@@ -96,6 +96,11 @@ const buildWorkspace = (overrides: Partial<UseTabWorkspaceResult> = {}): UseTabW
   closeLibrary: vi.fn(),
   uploadTab: vi.fn(),
   deleteTab: vi.fn(),
+  preview: undefined,
+  previewLibraryTab: vi.fn(),
+  previewOnlineTab: vi.fn(),
+  closePreview: vi.fn(),
+  addPreviewed: vi.fn(),
   online: {
     state: { kind: 'idle' },
     search: vi.fn(),

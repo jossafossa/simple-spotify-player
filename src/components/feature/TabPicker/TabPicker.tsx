@@ -17,6 +17,8 @@ type TabPickerProps = {
   onUnlink: (tabId: string) => void
   onUpload: (file: File) => void
   onOpen: (tabId: string) => void
+  /** Shows a library tab full page before it is added. */
+  onPreview?: (tabId: string) => void
   onClose: () => void
   /** The online search, placed between the library and the upload. */
   onlineSearch?: ReactNode
@@ -40,6 +42,7 @@ export const TabPicker = ({
   onUnlink,
   onUpload,
   onOpen,
+  onPreview,
   onClose,
   onlineSearch,
 }: TabPickerProps) => {
@@ -97,6 +100,16 @@ export const TabPicker = ({
                   <span className={styles.tabName}>{tab.name}</span>
                   <span className={styles.meta}>{describeTab(tab)}</span>
                 </span>
+                {onPreview && (
+                  <button
+                    type="button"
+                    className={styles.action}
+                    onClick={() => onPreview(tab.id)}
+                    aria-label={`Preview ${tab.name}`}
+                  >
+                    Preview
+                  </button>
+                )}
                 <button
                   type="button"
                   className={styles.add}

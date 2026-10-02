@@ -274,4 +274,39 @@ describe('TabViewer', () => {
       expect(getByText('Spotify is playing another song')).toBeInTheDocument()
     })
   })
+
+  describe('as a preview', () => {
+    it('offers to add the tab, and leads back rather than to the player', async () => {
+      const user = userEvent.setup()
+      const onAdd = vi.fn()
+      const { getByRole, queryByRole, onClose } = renderViewer({ preview: { onAdd, isAdding: false } })
+
+      expect(getByRole('region', { name: 'Tab viewer' })).toHaveTextContent('Preview for Nemo — Nightwish')
+      await user.click(getByRole('button', { name: 'Add to this song' }))
+      await user.click(getByRole('button', { name: '← Back' }))
+
+      expect(onAdd).toHaveBeenCalledOnce()
+      expect(onClose).toHaveBeenCalledOnce()
+      expect(queryByRole('button', { name: '← Back to player' })).not.toBeInTheDocument()
+    })
+
+    it('cannot add while adding, or before the file is in', () => {
+      const adding = renderViewer({ preview: { onAdd: vi.fn(), isAdding: true } })
+      expect(adding.getByRole('button', { name: 'Adding…' })).toBeDisabled()
+      adding.unmount()
+
+      const loading = renderViewer({ preview: { onAdd: vi.fn(), isAdding: false }, data: undefined, dataStatus: 'loading' })
+      expect(loading.getByRole('button', { name: 'Add to this song' })).toBeDisabled()
+    })
+
+    it('says when the preview could not be downloaded', () => {
+      const { getByText } = renderViewer({
+        preview: { onAdd: vi.fn(), isAdding: false },
+        data: undefined,
+        dataStatus: 'error',
+      })
+
+      expect(getByText(/could not be downloaded to preview/)).toBeInTheDocument()
+    })
+  })
 })

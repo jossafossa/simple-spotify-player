@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLibraryBackup, type UseLibraryBackupResult } from '~/hooks/useLibraryBackup'
 import { useOnlineTabSearch, type UseOnlineTabSearchResult } from '~/hooks/useOnlineTabSearch'
 import { useTabData, type UseTabDataResult } from '~/hooks/useTabData'
+import { useTabPreview, type TabPreview } from '~/hooks/useTabPreview'
 import { useTabLibrary, type UseTabLibraryResult } from '~/hooks/useTabLibrary'
 import {
   cleanSongTitle,
@@ -37,6 +38,14 @@ export type UseTabWorkspaceResult = {
   closeLibrary: () => void
   uploadTab: (file: File, song?: SongRef) => void
   deleteTab: (tab: TabFile) => void
+  /** A tab being looked at before it is added to the picker's song. */
+  preview: TabPreview | undefined
+  previewLibraryTab: (tabId: string) => void
+  previewOnlineTab: (tab: OnlineTab) => void
+  /** Back from the preview to the picker it came from. */
+  closePreview: () => void
+  /** Adds the previewed tab to the song, and goes on showing it as a linked tab. */
+  addPreviewed: () => void
   online: UseOnlineTabSearchResult & {
     addingIds: string[]
     addedIds: string[]
@@ -67,6 +76,7 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
   const [uploadError, setUploadError] = useState<string>()
   const data = useTabData(openTabState?.tabId)
   const onlineSearch = useOnlineTabSearch()
+  const tabPreview = useTabPreview(library)
   const [addingIds, setAddingIds] = useState<string[]>([])
   const [addedIds, setAddedIds] = useState<string[]>([])
 
@@ -174,6 +184,35 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
     closeLibrary: () => setIsLibraryOpen(false),
     uploadTab,
     deleteTab,
+    preview: tabPreview.preview,
+    previewLibraryTab: (tabId) => {
+      if (pickerSong) {
+        tabPreview.previewLibraryTab(tabId, pickerSong)
+      }
+    },
+    previewOnlineTab: (tab) => {
+      if (pickerSong) {
+        tabPreview.previewOnlineTab(tab, pickerSong)
+      }
+    },
+    closePreview: tabPreview.closePreview,
+    addPreviewed: () => {
+      const song = tabPreview.preview?.song
+      setUploadError(undefined)
+      tabPreview
+        .addPreviewed()
+        .then((tabId) => {
+          tabPreview.closePreview()
+          if (song && tabId) {
+            openTabInViewer(song, tabId)
+          }
+        })
+        .catch((error: unknown) => {
+          console.error('Could not add the previewed tab', error)
+          tabPreview.closePreview()
+          setUploadError(describeError(error))
+        })
+    },
     online: { ...onlineSearch, addingIds, addedIds, addOnlineTab },
   }
 }

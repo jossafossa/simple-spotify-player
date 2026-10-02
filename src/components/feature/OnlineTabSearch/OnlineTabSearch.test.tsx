@@ -110,6 +110,20 @@ describe('OnlineTabSearch', () => {
     expect(getByText(/★ 4.5 · 51 votes/)).toBeInTheDocument()
   })
 
+  it('previews a free file without adding it', async () => {
+    const user = userEvent.setup()
+    const onPreview = vi.fn()
+    const { getByRole, onAdd } = renderSearch(
+      { kind: 'done', query, results: [free, ug], failures: [] },
+      { onPreview },
+    )
+
+    await user.click(getByRole('button', { name: 'Preview Nemo (Guitar Pro) from GProTab' }))
+
+    expect(onPreview).toHaveBeenCalledWith(free)
+    expect(onAdd).not.toHaveBeenCalled()
+  })
+
   it('shows which results are being added or already are', () => {
     const { getByRole } = renderSearch(
       { kind: 'done', query, results: [free, free2], failures: [] },

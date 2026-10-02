@@ -16,6 +16,8 @@ type OnlineTabSearchProps = {
   addedIds: string[]
   onSearch: (query: OnlineSearchQuery) => void
   onAdd: (tab: OnlineTab) => void
+  /** Downloads a result to look at, without adding it. */
+  onPreview?: (tab: OnlineTab) => void
 }
 
 const describe = (tab: OnlineTab): string =>
@@ -60,6 +62,7 @@ export const OnlineTabSearch = ({
   addedIds,
   onSearch,
   onAdd,
+  onPreview,
 }: OnlineTabSearchProps) => {
   const [artist, setArtist] = useState(initialQuery.artist)
   const [title, setTitle] = useState(initialQuery.title)
@@ -151,15 +154,27 @@ export const OnlineTabSearch = ({
                   key={tab.id}
                   tab={tab}
                   action={
-                    <button
-                      type="button"
-                      className={styles.add}
-                      disabled={isAdding || isAdded}
-                      onClick={() => onAdd(tab)}
-                      aria-label={`Add ${tab.title} (${tab.kind}) from ${sourceName(tab.source)}`}
-                    >
-                      {isAdded ? 'Added' : isAdding ? 'Adding…' : 'Add'}
-                    </button>
+                    <span className={styles.actions}>
+                      {onPreview && (
+                        <button
+                          type="button"
+                          className={styles.preview}
+                          onClick={() => onPreview(tab)}
+                          aria-label={`Preview ${tab.title} (${tab.kind}) from ${sourceName(tab.source)}`}
+                        >
+                          Preview
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={styles.add}
+                        disabled={isAdding || isAdded}
+                        onClick={() => onAdd(tab)}
+                        aria-label={`Add ${tab.title} (${tab.kind}) from ${sourceName(tab.source)}`}
+                      >
+                        {isAdded ? 'Added' : isAdding ? 'Adding…' : 'Add'}
+                      </button>
+                    </span>
                   }
                 />
               )

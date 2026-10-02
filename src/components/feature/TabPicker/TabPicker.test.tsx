@@ -60,6 +60,16 @@ describe('TabPicker', () => {
     expect(onLink).toHaveBeenCalledWith('amaranth')
   })
 
+  it('previews a library tab before adding it', async () => {
+    const user = userEvent.setup()
+    const onPreview = vi.fn()
+    const { getByRole } = renderPicker({ onPreview })
+
+    await user.click(getByRole('button', { name: 'Preview Amaranth' }))
+
+    expect(onPreview).toHaveBeenCalledWith('amaranth')
+  })
+
   it('says when nothing matches', async () => {
     const user = userEvent.setup()
     const { getByRole, getByText } = renderPicker()

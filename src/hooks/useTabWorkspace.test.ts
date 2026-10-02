@@ -161,4 +161,34 @@ describe('useTabWorkspace', () => {
     await waitFor(() => expect(result.current.tabCountFor(song)).toBe(2))
     expect(result.current.library.songs).toHaveLength(1)
   })
+
+  it('previews a found tab for the picker’s song, then adds it and shows it as linked', async () => {
+    vi.mocked(downloadOnlineTab).mockResolvedValue(new File([new Uint8Array([1])], 'nightwish-nemo_2.gp4'))
+    const { result } = await renderWorkspace()
+    act(() => result.current.openPicker(song))
+
+    act(() => result.current.previewOnlineTab(onlineTab))
+    await waitFor(() => expect(result.current.preview?.dataStatus).toBe('ready'))
+    expect(result.current.pickerSong).toEqual(song)
+    expect(result.current.library.tabs).toEqual([])
+
+    act(() => result.current.addPreviewed())
+
+    await waitFor(() => expect(result.current.openTab?.tab.name).toBe('Nemo · GProTab version 2'))
+    expect(result.current.preview).toBeUndefined()
+    expect(result.current.pickerSong).toBeUndefined()
+    expect(result.current.tabCountFor(song)).toBe(1)
+  })
+
+  it('goes back from a preview to the picker', async () => {
+    vi.mocked(downloadOnlineTab).mockResolvedValue(new File([new Uint8Array([1])], 'a.gp4'))
+    const { result } = await renderWorkspace()
+    act(() => result.current.openPicker(song))
+    act(() => result.current.previewOnlineTab(onlineTab))
+
+    act(() => result.current.closePreview())
+
+    expect(result.current.preview).toBeUndefined()
+    expect(result.current.pickerSong).toEqual(song)
+  })
 })
