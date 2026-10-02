@@ -116,42 +116,10 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  // A gutter the active marker fills, so marking a row shifts nothing.
-  box-shadow: inset 2px 0 0 transparent;
   text-align: left;
-  transition:
-    background-color 120ms linear,
-    box-shadow 120ms linear;
 
   &:focus-visible {
     outline-offset: -2px;
-  }
-
-  &:hover {
-    background: t.$ink-hover;
-
-    .trackName {
-      color: t.$text;
-    }
-
-    .index {
-      color: t.$text-muted;
-    }
-  }
-
-  &[aria-current] {
-    background: t.$accent-wash;
-    box-shadow: inset 2px 0 0 t.$accent;
-
-    &:hover {
-      background: t.$accent-wash-strong;
-    }
-
-    .index,
-    .trackName,
-    .duration {
-      color: t.$accent;
-    }
   }
 }
 
@@ -200,12 +168,42 @@
   color: t.$text-faint;
 }
 
+/** The highlight sits on the row, so it runs on under the tab button. */
 .row {
   display: flex;
   align-items: center;
+  padding-right: t.$s-2;
+  // A gutter the active marker fills, so marking a row shifts nothing.
+  box-shadow: inset 2px 0 0 transparent;
+  transition:
+    background-color 120ms linear,
+    box-shadow 120ms linear;
 
-  &:hover .tabButton {
-    opacity: 1;
+  &:hover {
+    background: t.$ink-hover;
+
+    .tabButton {
+      opacity: 1;
+    }
+
+    .index {
+      color: t.$text-muted;
+    }
+  }
+
+  &[data-current] {
+    background: t.$accent-wash;
+    box-shadow: inset 2px 0 0 t.$accent;
+
+    &:hover {
+      background: t.$accent-wash-strong;
+    }
+
+    .index,
+    .trackName,
+    .duration {
+      color: t.$accent;
+    }
   }
 }
 

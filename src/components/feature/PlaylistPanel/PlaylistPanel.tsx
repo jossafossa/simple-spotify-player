@@ -118,6 +118,7 @@ const PlaylistPanelComponent = ({
                 key={`${track.uri}-${index}`}
                 ref={isCurrent ? currentTrackRef : undefined}
                 className={styles.row}
+                data-current={isCurrent || undefined}
               >
                 <button
                   type="button"
