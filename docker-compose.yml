@@ -1,0 +1,48 @@
+# `docker compose up` starts the app and its tab search service.
+# Open http://127.0.0.1:5173 — Spotify only accepts the loopback IP, not
+# "localhost", as a redirect URI.
+services:
+  tab-search:
+    image: node:22-alpine
+    working_dir: /app
+    # Node 22 runs the TypeScript directly, and the service has no
+    # dependencies, so its source is all it needs.
+    command: node server/main.ts
+    volumes:
+      - ./server:/app/server:ro
+    environment:
+      HOST: 0.0.0.0
+      PORT: '8787'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8787/api/tabs/health']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm dev"
+    volumes:
+      - .:/app
+      # The container's own node_modules, so Linux builds of native packages
+      # never mix with the host's.
+      - web_node_modules:/app/node_modules
+      # pnpm's store, kept off the bind mount so it never lands in the project.
+      - pnpm_store:/pnpm-store
+    environment:
+      VITE_HOST: 0.0.0.0
+      TAB_SEARCH_URL: http://tab-search:8787
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+      npm_config_store_dir: /pnpm-store
+      CI: 'true'
+    ports:
+      - '127.0.0.1:${WEB_PORT:-5173}:5173'
+    depends_on:
+      tab-search:
+        condition: service_healthy
+
+volumes:
+  web_node_modules:
+  pnpm_store:

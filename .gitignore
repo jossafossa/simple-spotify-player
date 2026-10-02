@@ -26,3 +26,7 @@ dist-ssr
 # Copied in by the alphaTab Vite plugin on every dev start and build.
 public/font/
 public/soundfont/
+
+# Browser automation snapshots and a stray pnpm store, never project files.
+.playwright-cli/
+.pnpm-store/
