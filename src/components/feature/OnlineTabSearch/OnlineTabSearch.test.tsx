@@ -91,6 +91,30 @@ describe('OnlineTabSearch', () => {
     expect(getByRole('button', { name: 'Searching…' })).toBeDisabled()
   })
 
+  it('leaves out files already in the library, and says how many', () => {
+    const inLibrary = { ...free, fingerprint: 'abc', sizeBytes: 2048 }
+    const sized = { ...free2, fingerprint: 'def', sizeBytes: 39_635 }
+    const { getByRole, queryByRole, getByText } = renderSearch(
+      { kind: 'done', query, results: [inLibrary, sized], failures: [] },
+      { libraryFingerprints: ['abc'] },
+    )
+
+    expect(queryByRole('button', { name: 'Add Nemo (Guitar Pro) from GProTab' })).not.toBeInTheDocument()
+    expect(getByRole('button', { name: 'Add Nemo (Guitar Pro · version 2) from GProTab' })).toBeInTheDocument()
+    expect(getByText(/· 39 KB$/)).toBeInTheDocument()
+    expect(getByText('One more is already in your library, listed above.')).toBeInTheDocument()
+  })
+
+  it('keeps a result added just now, marked added', () => {
+    const added = { ...free, fingerprint: 'abc' }
+    const { getByRole } = renderSearch(
+      { kind: 'done', query, results: [added], failures: [] },
+      { libraryFingerprints: ['abc'], addedIds: [added.id] },
+    )
+
+    expect(getByRole('button', { name: 'Add Nemo (Guitar Pro) from GProTab' })).toHaveTextContent('Added')
+  })
+
   it('adds free files in one click, and links the rest to their site', async () => {
     const user = userEvent.setup()
     const { getByRole, getByText, onAdd } = renderSearch({

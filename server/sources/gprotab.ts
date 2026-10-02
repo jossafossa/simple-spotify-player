@@ -1,5 +1,7 @@
+import { fetchWithRetry } from '../fetchPage.ts'
+import { fileNameFrom, readFileResponse } from '../fileResponse.ts'
 import { artistFactor, decodeHtml, slugify, titleScore } from '../text.ts'
-import type { OnlineTab, SourceSearch } from '../types.ts'
+import type { FileSource, OnlineTab, SourceSearch } from '../types.ts'
 
 export const GPROTAB_ORIGIN = 'https://gprotab.net'
 
@@ -86,4 +88,19 @@ export const searchGprotab: SourceSearch = async ({ artist, title }, fetchPage) 
       },
     ]
   })
+}
+
+/** A tab page answers `?download` with the file, given the page as referrer. */
+export const gprotabFiles: FileSource = {
+  pathPattern: GPROTAB_TAB_PATH,
+  fetchFile: async (path, fetchImpl) => {
+    const response = await fetchWithRetry(fetchImpl, `${GPROTAB_ORIGIN}${path}?download`, {
+      headers: { Referer: `${GPROTAB_ORIGIN}${path}` },
+      timeoutMs: 15_000,
+    })
+    const data = await readFileResponse(response, 'GProTab')
+    const fallback = `${path.split('/').slice(-2).join('-')}.gp5`
+
+    return { data, fileName: fileNameFrom(response.headers.get('content-disposition'), fallback) }
+  },
 }

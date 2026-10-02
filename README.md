@@ -107,10 +107,15 @@ Tabs are linked to songs and stored in the browser — no server involved.
   for good. Tempo changes inside a recording cannot be followed this way.
 - **Finding tabs** — the add-tab dialog searches tab sites for the song
   when you press *Search* (artist and title prefilled, with Spotify's
-  "- Remastered 2021" and "(feat. …)" stripped). **Free to download** results — from
-  [GProTab](https://gprotab.net), which shares Guitar Pro files with no
-  account — are added with one click: downloaded, stored and linked to the
-  song. Songsterr and Ultimate Guitar results are listed too, with ratings
+  "- Remastered 2021" and "(feat. …)" stripped). **Free to download** results
+  — from [GProTab](https://gprotab.net), [gtptabs](https://gtptabs.com),
+  [guitarprotabs.org](https://guitarprotabs.org) and
+  [The Guitar Lesson](https://www.theguitarlesson.com/guitar-pro-tabs/), all
+  sharing Guitar Pro files with no account — are added with one click:
+  downloaded, stored and linked to the song. These sites copy each other's
+  files, often under another title, so the search fetches the files and
+  lists each one once, with its size; a file already in the library is left
+  out. Songsterr and Ultimate Guitar results are listed too, with ratings
   and votes, but their files need an account there, so they open on their
   site: download there, then upload.
 - **Library** — *Tab library* lists every song with tabs (open a tab, play the
@@ -184,13 +189,17 @@ with hot reload.
 directly, so it searches them on the app's behalf. It is plain Node 22
 TypeScript with no dependencies, run as-is by Node's type stripping.
 
-- `GET /api/tabs/search?artist=&title=` asks GProTab, Songsterr and
-  Ultimate Guitar in parallel, ranks the results (title match, then artist,
-  downloadable first, then votes), and reports any source that failed
-  without failing the search. Pages are cached for ten minutes.
-- `GET /api/tabs/download?path=/en/tabs/<artist>/<song>` fetches a GProTab
-  file. The path must have exactly that shape, so the route cannot be used
-  to fetch anything else.
+- `GET /api/tabs/search?artist=&title=` asks GProTab, gtptabs,
+  guitarprotabs.org, The Guitar Lesson, Songsterr and Ultimate Guitar in
+  parallel, ranks the results (title match, then artist, downloadable
+  first, then votes), and reports any source that failed without failing
+  the search. It then fetches the downloadable files, six at a time and for
+  at most five seconds, and drops each copy of a file listed higher up
+  (SHA-256); the rest carry their size and fingerprint. Pages and files are
+  cached for ten minutes, so adding a result costs the site nothing more.
+- `GET /api/tabs/download?source=<site>&path=<path>` fetches one file. Each
+  site checks the path against the shape of its own tabs, so the route
+  cannot be used to fetch anything else.
 
 Under `pnpm dev` and `pnpm preview` Vite mounts it as middleware; in the
 Docker image the same server also serves the built app (`STATIC_DIR`).

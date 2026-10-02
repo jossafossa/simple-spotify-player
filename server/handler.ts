@@ -1,9 +1,9 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { createFetchPage, fetchWithRetry } from './fetchPage.ts'
+import { createFetchPage } from './fetchPage.ts'
+import { createFetchFile, NotDownloadableError, type FetchFile } from './files.ts'
 import { searchTabs } from './searchTabs.ts'
-import { GPROTAB_ORIGIN, GPROTAB_TAB_PATH } from './sources/gprotab.ts'
+import type { DownloadedFile, TabSource } from './types.ts'
 
-const MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024
 const MAX_QUERY_LENGTH = 200
 
 const sendJson = (response: ServerResponse, status: number, body: unknown): void => {
@@ -11,44 +11,34 @@ const sendJson = (response: ServerResponse, status: number, body: unknown): void
   response.end(JSON.stringify(body))
 }
 
-const fileNameFrom = (disposition: string | null, fallback: string): string => {
-  const name = /filename="?([^";]+)"?/i.exec(disposition ?? '')?.[1]
-  return name && /^[\w .-]+\.(gp[345x]?|ptb)$/i.test(name) ? name : fallback
-}
-
 /**
- * Proxies one GProTab file. The path is checked against the shape of a tab
- * page, so this can never be turned into a fetch of an arbitrary URL.
+ * Hands over one tab file, fetched from the site named. Each site checks the
+ * path against the shape of its own tabs, so this can never be turned into
+ * a fetch of an arbitrary URL.
  */
-const download = async (
-  url: URL,
-  response: ServerResponse,
-  fetchImpl: typeof fetch,
-): Promise<void> => {
+const download = async (url: URL, response: ServerResponse, fetchFile: FetchFile): Promise<void> => {
+  const source = (url.searchParams.get('source') ?? 'gprotab') as TabSource
   const path = url.searchParams.get('path') ?? ''
-  if (!GPROTAB_TAB_PATH.test(path)) {
-    sendJson(response, 400, { error: 'Not a GProTab tab path.' })
+
+  let file: DownloadedFile
+  try {
+    file = await fetchFile(source, path)
+  } catch (error: unknown) {
+    if (error instanceof NotDownloadableError) {
+      sendJson(response, 400, { error: error.message })
+      return
+    }
+    sendJson(response, 502, { error: error instanceof Error ? error.message : 'The download failed.' })
     return
   }
 
-  const upstream = await fetchWithRetry(fetchImpl, `${GPROTAB_ORIGIN}${path}?download`, {
-    headers: { Referer: `${GPROTAB_ORIGIN}${path}` },
-    timeoutMs: 15_000,
-  })
-  const data = new Uint8Array(await upstream.arrayBuffer())
-
-  if (!upstream.ok || data.byteLength === 0 || data.byteLength > MAX_DOWNLOAD_BYTES) {
-    sendJson(response, 502, { error: `GProTab did not hand over the file (${upstream.status}).` })
-    return
-  }
-
-  const fallback = `${path.split('/').slice(-2).join('-')}.gp5`
   response.writeHead(200, {
     'Content-Type': 'application/octet-stream',
-    'Content-Disposition': `attachment; filename="${fileNameFrom(upstream.headers.get('content-disposition'), fallback)}"`,
-    'Content-Length': data.byteLength,
+    // A name made from a URL can hold anything; a header may not.
+    'Content-Disposition': `attachment; filename="${file.fileName.replace(/[^\w .,()'&-]/g, '_')}"`,
+    'Content-Length': file.data.byteLength,
   })
-  response.end(data)
+  response.end(file.data)
 }
 
 export type TabSearchOptions = {
@@ -102,6 +92,7 @@ export const createTabSearchHandler = (
   { allowedOrigins = [] }: TabSearchOptions = {},
 ): TabSearchHandler => {
   const fetchPage = createFetchPage(fetchImpl)
+  const fetchFile = createFetchFile(fetchImpl)
 
   return (request, response, next) => {
     const url = new URL(request.url ?? '/', 'http://localhost')
@@ -145,14 +136,14 @@ export const createTabSearchHandler = (
         return
       }
 
-      searchTabs({ artist, title }, fetchPage)
+      searchTabs({ artist, title }, fetchPage, fetchFile)
         .then((result) => sendJson(response, 200, result))
         .catch(fail)
       return
     }
 
     if (url.pathname === '/api/tabs/download') {
-      download(url, response, fetchImpl).catch(fail)
+      download(url, response, fetchFile).catch(fail)
       return
     }
 

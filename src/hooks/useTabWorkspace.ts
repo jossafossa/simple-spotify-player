@@ -76,7 +76,6 @@ const describeError = (error: unknown): string =>
  */
 export const useTabWorkspace = (): UseTabWorkspaceResult => {
   const library = useTabLibrary()
-  const fingerprints = useTabFingerprints(library.tabs)
   const backup = useLibraryBackup(library.reload)
   const [openTabState, setOpenTabState] = useState<OpenTab>()
   const [pickerSong, setPickerSong] = useState<SongRef>()
@@ -84,6 +83,12 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
   const [uploadError, setUploadError] = useState<string>()
   const data = useTabData(openTabState?.tabId)
   const onlineSearch = useOnlineTabSearch()
+  // Library tabs the size of a file found online are compared with it too.
+  const onlineSizes =
+    onlineSearch.state.kind === 'done'
+      ? onlineSearch.state.results.flatMap((tab) => tab.sizeBytes ?? [])
+      : []
+  const fingerprints = useTabFingerprints(library.tabs, onlineSizes)
   const tabPreview = useTabPreview(library)
   const [addingIds, setAddingIds] = useState<string[]>([])
   const [addedIds, setAddedIds] = useState<string[]>([])

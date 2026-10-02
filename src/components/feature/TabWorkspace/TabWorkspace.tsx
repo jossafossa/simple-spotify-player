@@ -45,6 +45,7 @@ export const TabDialogs = ({ workspace, onPlaySong }: TabDialogsProps) => {
             state={workspace.online.state}
             addingIds={workspace.online.addingIds}
             addedIds={workspace.online.addedIds}
+            libraryFingerprints={Object.values(workspace.fingerprints)}
             onSearch={workspace.online.search}
             onAdd={workspace.online.addOnlineTab}
             onPreview={workspace.previewOnlineTab}

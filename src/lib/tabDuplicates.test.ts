@@ -34,6 +34,14 @@ describe('fingerprintPossibleDuplicates', () => {
     expect(fingerprints.lone).toBeUndefined()
   })
 
+  it('also reads a lone tab the size of a file found elsewhere', async () => {
+    const readData = vi.fn(() => Promise.resolve(bytes(1, 2, 3)))
+
+    const fingerprints = await fingerprintPossibleDuplicates([buildTab('a', 3), buildTab('b', 5)], readData, [3])
+
+    expect(Object.keys(fingerprints)).toEqual(['a'])
+  })
+
   it('skips a tab whose file is gone', async () => {
     const fingerprints = await fingerprintPossibleDuplicates([buildTab('a', 3), buildTab('b', 3)], (id) =>
       Promise.resolve(id === 'a' ? bytes(1, 2, 3) : undefined),

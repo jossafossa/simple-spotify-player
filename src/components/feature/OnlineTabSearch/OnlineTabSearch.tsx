@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { OnlineSearchState } from '~/hooks/useOnlineTabSearch'
+import { formatFileSize } from '~/lib/formatFileSize'
 import { sourceName, type OnlineSearchQuery, type OnlineTab } from '~/lib/onlineTabSearch'
 import { buildTabSearchLinks } from '~/lib/tabSearchLinks'
 import type { SongRef } from '~/lib/types'
@@ -14,6 +15,8 @@ type OnlineTabSearchProps = {
   addingIds: string[]
   /** Results already added during this visit, by id. */
   addedIds: string[]
+  /** Fingerprints of files in the library, so a result already there is left out. */
+  libraryFingerprints?: string[]
   onSearch: (query: OnlineSearchQuery) => void
   onAdd: (tab: OnlineTab) => void
   /** Downloads a result to look at, without adding it. */
@@ -25,6 +28,7 @@ const describe = (tab: OnlineTab): string =>
     tab.kind.startsWith('Songsterr') ? tab.kind.replace(/^Songsterr · /, '') : tab.kind,
     tab.rating !== undefined ? `★ ${tab.rating}` : undefined,
     tab.votes ? `${tab.votes} votes` : undefined,
+    tab.sizeBytes !== undefined ? formatFileSize(tab.sizeBytes) : undefined,
   ]
     .filter(Boolean)
     .join(' · ')
@@ -60,6 +64,7 @@ export const OnlineTabSearch = ({
   state,
   addingIds,
   addedIds,
+  libraryFingerprints = [],
   onSearch,
   onAdd,
   onPreview,
@@ -67,7 +72,11 @@ export const OnlineTabSearch = ({
   const [artist, setArtist] = useState(initialQuery.artist)
   const [title, setTitle] = useState(initialQuery.title)
   const results = state.kind === 'done' ? state.results : []
-  const downloadable = results.filter((tab) => tab.downloadPath)
+  // One added just now stays, marked Added, rather than vanishing.
+  const isInLibrary = (tab: OnlineTab) =>
+    !!tab.fingerprint && libraryFingerprints.includes(tab.fingerprint) && !addedIds.includes(tab.id)
+  const downloadable = results.filter((tab) => tab.downloadPath && !isInLibrary(tab))
+  const inLibraryCount = results.filter(isInLibrary).length
   const linkOnly = results.filter((tab) => !tab.downloadPath)
 
   return (
@@ -181,6 +190,14 @@ export const OnlineTabSearch = ({
             })}
           </ul>
         </div>
+      )}
+
+      {inLibraryCount > 0 && (
+        <p className={styles.hint}>
+          {inLibraryCount === 1
+            ? 'One more is already in your library, listed above.'
+            : `${inLibraryCount} more are already in your library, listed above.`}
+        </p>
       )}
 
       {linkOnly.length > 0 && (

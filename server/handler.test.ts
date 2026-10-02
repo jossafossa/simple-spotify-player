@@ -35,7 +35,7 @@ describe('tab search handler', () => {
     const fetchImpl = vi.fn((url: string) =>
       Promise.resolve(
         new Response(
-          url.includes('songsterr')
+          url.includes('songsterr') || url.includes('theguitarlesson')
             ? '[]'
             : url.includes('/en/tabs/nightwish')
               ? '<a href="/en/tabs/nightwish/nemo">Nemo</a>'
@@ -85,6 +85,23 @@ describe('tab search handler', () => {
       expect(fetchImpl).not.toHaveBeenCalled()
     },
   )
+
+  it('downloads from the source named, and refuses one without files', async () => {
+    const fetchImpl = vi.fn(() =>
+      Promise.resolve(
+        new Response(gp5, { headers: { 'Content-Disposition': 'attachment; filename=nightwish-nemo.gp4' } }),
+      ),
+    )
+    const request = await serve(fetchImpl as unknown as typeof fetch)
+
+    const response = await request('/api/tabs/download?source=gtptabs&path=%2Ftabs%2Fdownload%2F12952.html')
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-disposition')).toBe('attachment; filename="nightwish-nemo.gp4"')
+    expect(fetchImpl).toHaveBeenCalledWith('https://gtptabs.com/tabs/download/12952.html', expect.anything())
+
+    const refused = await request('/api/tabs/download?source=songsterr&path=%2Fx')
+    expect(refused.status).toBe(400)
+  })
 
   it('reports an empty download as a failure', async () => {
     const request = await serve(vi.fn(() => Promise.resolve(new Response(''))) as unknown as typeof fetch)

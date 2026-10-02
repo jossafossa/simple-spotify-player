@@ -1,4 +1,10 @@
-export type TabSource = 'gprotab' | 'songsterr' | 'ultimate-guitar'
+export type TabSource =
+  | 'gprotab'
+  | 'gtptabs'
+  | 'guitarprotabs'
+  | 'theguitarlesson'
+  | 'songsterr'
+  | 'ultimate-guitar'
 
 /** One tab found online, ready for the app to list. */
 export type OnlineTab = {
@@ -13,6 +19,10 @@ export type OnlineTab = {
   url: string
   /** Set when the file can be fetched through this server's download route. */
   downloadPath: string | undefined
+  /** The file's size, once the search has fetched it. */
+  sizeBytes?: number
+  /** SHA-256 of the file, once the search has fetched it; copies share it. */
+  fingerprint?: string
   rating: number | undefined
   votes: number | undefined
   /** 0–1, higher is a better match for what was searched. */
@@ -28,3 +38,19 @@ export type SourceSearch = (query: SearchQuery, fetchPage: FetchPage) => Promise
 
 /** Fetches a URL as text; injected so sources can be tested without the network. */
 export type FetchPage = (url: string) => Promise<string>
+
+/** A tab file as fetched from its site. */
+export type DownloadedFile = {
+  data: Uint8Array
+  fileName: string
+}
+
+/**
+ * How one source hands over its files. The path is checked against the
+ * pattern first, so the download route can never be made to fetch anything
+ * but a tab of that site.
+ */
+export type FileSource = {
+  pathPattern: RegExp
+  fetchFile: (path: string, fetchImpl: typeof fetch) => Promise<DownloadedFile>
+}

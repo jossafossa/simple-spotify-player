@@ -101,7 +101,9 @@ describe('downloadOnlineTab', () => {
 
     const file = await downloadOnlineTab(tab)
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/tabs/download?path=%2Fen%2Ftabs%2Fnightwish%2Fnemo-2')
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/tabs/download?source=gprotab&path=%2Fen%2Ftabs%2Fnightwish%2Fnemo-2',
+    )
     expect(file.name).toBe('nightwish-nemo_2.gp4')
     expect(file.size).toBe(2)
   })

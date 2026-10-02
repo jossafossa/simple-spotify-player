@@ -71,7 +71,9 @@ export const downloadOnlineTab = async (tab: OnlineTab): Promise<File> => {
   let response: Response
   try {
     response = await fetch(
-      serviceUrl(`/api/tabs/download?path=${encodeURIComponent(tab.downloadPath)}`),
+      serviceUrl(
+        `/api/tabs/download?source=${encodeURIComponent(tab.source)}&path=${encodeURIComponent(tab.downloadPath)}`,
+      ),
     )
   } catch {
     throw new TabSearchUnavailableError()
@@ -90,6 +92,9 @@ export const downloadOnlineTab = async (tab: OnlineTab): Promise<File> => {
 
 const SOURCE_NAMES: Record<TabSource, string> = {
   gprotab: 'GProTab',
+  gtptabs: 'gtptabs',
+  guitarprotabs: 'guitarprotabs.org',
+  theguitarlesson: 'The Guitar Lesson',
   songsterr: 'Songsterr',
   'ultimate-guitar': 'Ultimate Guitar',
 }

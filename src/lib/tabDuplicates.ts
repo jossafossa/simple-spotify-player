@@ -5,19 +5,24 @@ const toHex = (digest: ArrayBuffer): string =>
 
 /**
  * A fingerprint of the file behind each tab that may have a twin. Only tabs
- * sharing their size with another are read and hashed: a file of another
- * size cannot be the same file, and reading every tab would be slow.
+ * sharing their size with another, or with a file found online, are read
+ * and hashed: a file of another size cannot be the same file, and reading
+ * every tab would be slow.
  */
 export const fingerprintPossibleDuplicates = async (
   tabs: TabFile[],
   readData: (tabId: string) => Promise<ArrayBuffer | undefined>,
+  otherSizes: number[] = [],
 ): Promise<Record<string, string>> => {
   const countBySize = new Map<number, number>()
   for (const tab of tabs) {
     countBySize.set(tab.sizeBytes, (countBySize.get(tab.sizeBytes) ?? 0) + 1)
   }
 
-  const sameSized = tabs.filter((tab) => (countBySize.get(tab.sizeBytes) ?? 0) > 1)
+  const sizesElsewhere = new Set(otherSizes)
+  const sameSized = tabs.filter(
+    (tab) => (countBySize.get(tab.sizeBytes) ?? 0) > 1 || sizesElsewhere.has(tab.sizeBytes),
+  )
   const entries = await Promise.all(
     sameSized.map(async (tab): Promise<[string, string][]> => {
       const data = await readData(tab.id)
