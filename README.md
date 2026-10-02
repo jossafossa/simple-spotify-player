@@ -139,13 +139,15 @@ loopback IP, not `localhost`, as a plain-http redirect URI.
 ### Hosting
 
 The root `Dockerfile` builds the app and runs `server/main.ts`, which serves
-both the built site and the tab search on **port 3000**. `docker compose up
+both the built site and the tab search on `$PORT` — **3000** unless the host
+sets another, as Coolify does. `docker compose up
 -d` builds and starts it; `APP_PORT=8080 docker compose up -d` publishes it on
 another port.
 
 On **Coolify**: add the repository and choose the *Dockerfile* (or *Docker
 Compose*) build pack, keeping the defaults — Coolify gives the app a domain
-with HTTPS on port 3000. Then, in your Spotify app's settings, add
+with HTTPS, and sets `PORT` to the port it routes to, which the server and
+its health check both follow. Then, in your Spotify app's settings, add
 `https://<that domain>/` as a Redirect URI. That is the only manual step:
 the Client ID is entered in the app itself.
 
