@@ -1,0 +1,202 @@
+@use '../../theme' as t;
+
+/**
+ * Covers the page, under any dialog (those sit at z-index 10): a slim bar on
+ * top, the notation in the middle taking every pixel left, the controls in a
+ * bar along the bottom.
+ */
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  background: t.$ink-page;
+  font-family: t.$sans;
+  text-align: left;
+}
+
+.topBar,
+.bottomBar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: t.$s-4;
+  padding: t.$s-3 t.$s-5;
+  background: t.$ink-surface;
+}
+
+.topBar {
+  border-bottom: 1px solid t.$rule;
+}
+
+/** Ochre rule on top, the card's masthead turned upside down. */
+.bottomBar {
+  flex-wrap: wrap;
+  border-top: 2px solid t.$accent;
+}
+
+.back {
+  @include t.button-ghost;
+
+  flex: 0 0 auto;
+}
+
+.heading {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: t.$s-3;
+
+  // A phone has no room for both on one line.
+  @media (max-width: 600px) {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+.title {
+  @include t.display(t.$fs-title);
+
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: t.$text;
+}
+
+.song {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: t.$fs-small;
+  color: t.$text-muted;
+}
+
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: t.$s-3;
+  margin: t.$s-5 auto 0;
+  width: min(640px, calc(100% - #{t.$s-5 * 2}));
+  padding: t.$s-4;
+  border: 1px solid t.$rule;
+  border-left: 2px solid t.$rule-strong;
+  border-radius: t.$radius-sm;
+  background: t.$ink-raised;
+}
+
+.noticeText {
+  margin: 0;
+  font-size: t.$fs-body;
+  line-height: t.$lh-body;
+  color: t.$text-muted;
+}
+
+/**
+ * Notation is drawn in black, so it sits on paper rather than on the ink —
+ * the one light surface in the app.
+ */
+.paper {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: #f4f0e6;
+  color: #14181e;
+
+  &[hidden] {
+    display: none;
+  }
+
+  > div {
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  // alphaTab's own player chrome: the beat cursor and the bar highlight.
+  :global(.at-cursor-bar) {
+    background: rgba(207, 155, 69, 0.18);
+  }
+
+  :global(.at-cursor-beat) {
+    width: 3px;
+    background: t.$accent-deep;
+  }
+
+  :global(.at-highlight *) {
+    fill: t.$accent-deep;
+    stroke: t.$accent-deep;
+  }
+
+  :global(.at-selection div) {
+    background: rgba(207, 155, 69, 0.25);
+  }
+}
+
+.group {
+  display: flex;
+  gap: t.$s-1;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: t.$s-2;
+}
+
+.label {
+  @include t.micro-label;
+
+  color: t.$text-faint;
+}
+
+.select {
+  max-width: 220px;
+  padding: t.$s-2;
+  border: 1px solid t.$rule;
+  border-radius: t.$radius-sm;
+  background: t.$ink-well;
+  color: t.$text;
+  font-family: t.$sans;
+  font-size: t.$fs-small;
+  cursor: pointer;
+
+  @include t.focus-ring(1px);
+}
+
+.primary {
+  @include t.button-primary;
+
+  padding: t.$s-2 t.$s-4;
+}
+
+.ghost {
+  @include t.button-ghost;
+}
+
+.quiet {
+  @include t.button-quiet;
+
+  align-self: center;
+}
+
+/** Spotify's transport keeps to the far end, apart from the tab's own. */
+.spotify {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: t.$s-3;
+  min-width: 0;
+}
