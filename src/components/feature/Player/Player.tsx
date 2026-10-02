@@ -361,20 +361,14 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
         isPaused: playbackState.isPaused,
       }}
       playbackControls={
-        <>
-          <span className={styles.miniTrack}>
-            <span className={styles.miniLabel}>Spotify</span>
-            {playbackState.track.name}
-          </span>
-          <div className={styles.miniTransport}>
-            <Controls
-              isPaused={playbackState.isPaused}
-              onTogglePlay={togglePlay}
-              onNext={nextTrack}
-              onPrevious={previousTrack}
-            />
-          </div>
-        </>
+        <div className={styles.miniTransport}>
+          <Controls
+            isPaused={playbackState.isPaused}
+            onTogglePlay={togglePlay}
+            onNext={nextTrack}
+            onPrevious={previousTrack}
+          />
+        </div>
       }
     />,
   )

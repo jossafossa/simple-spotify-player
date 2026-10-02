@@ -30,10 +30,45 @@
   border-bottom: 1px solid t.$rule;
 }
 
-/** Ochre rule on top, the card's masthead turned upside down. */
+/**
+ * Ochre rule on top, the card's masthead turned upside down. Three columns,
+ * the outer two equal, so the middle one sits in the true centre of the bar.
+ */
 .bottomBar {
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   border-top: 2px solid t.$accent;
+
+  // Too narrow for three columns: stack them, the transport first.
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+
+    .barCenter {
+      order: -1;
+    }
+  }
+}
+
+.barStart,
+.barEnd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: t.$s-3;
+  min-width: 0;
+}
+
+.barEnd {
+  justify-content: flex-end;
+
+  @media (max-width: 900px) {
+    justify-content: flex-start;
+  }
+}
+
+.barCenter {
+  display: flex;
+  justify-content: center;
 }
 
 .back {
@@ -192,13 +227,10 @@
   align-self: center;
 }
 
-/** Spotify's transport keeps to the far end, apart from the tab's own. */
 .spotify {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: t.$s-3;
-  min-width: 0;
 }
 
 .toggle {

@@ -154,155 +154,162 @@ export const TabViewer = ({
       </main>
 
       <footer className={styles.bottomBar}>
-        {isRenderable && alphaTab.status === 'ready' && (
-          <div className={styles.group} role="group" aria-label="Tab playback">
-            <button
-              type="button"
-              className={styles.primary}
-              onClick={(event) => {
-                event.currentTarget.blur()
-                alphaTab.playPause()
-              }}
-              disabled={!alphaTab.isPlayerReady || isFollowing}
-              title={
-                isFollowing
-                  ? 'The tab is following Spotify'
-                  : alphaTab.isPlayerReady
-                    ? undefined
-                    : 'Loading the sound font…'
-              }
-            >
-              {alphaTab.isPlaying ? 'Pause tab' : 'Play tab'}
-            </button>
-            <button
-              type="button"
-              className={styles.ghost}
-              onClick={(event) => {
-                event.currentTarget.blur()
-                alphaTab.stop()
-              }}
-              disabled={!alphaTab.isPlayerReady || isFollowing}
-            >
-              Stop
-            </button>
-          </div>
-        )}
+        <div className={styles.barStart}>
+          {isRenderable && alphaTab.status === 'ready' && (
+            <div className={styles.group} role="group" aria-label="Tab playback">
+              <button
+                type="button"
+                className={styles.primary}
+                onClick={(event) => {
+                  event.currentTarget.blur()
+                  alphaTab.playPause()
+                }}
+                disabled={!alphaTab.isPlayerReady || isFollowing}
+                title={
+                  isFollowing
+                    ? 'The tab is following Spotify'
+                    : alphaTab.isPlayerReady
+                      ? undefined
+                      : 'Loading the sound font…'
+                }
+              >
+                {alphaTab.isPlaying ? 'Pause tab' : 'Play tab'}
+              </button>
+              <button
+                type="button"
+                className={styles.ghost}
+                onClick={(event) => {
+                  event.currentTarget.blur()
+                  alphaTab.stop()
+                }}
+                disabled={!alphaTab.isPlayerReady || isFollowing}
+              >
+                Stop
+              </button>
+            </div>
+          )}
 
-        {spotifyPlayback && isRenderable && alphaTab.status === 'ready' && (
-          <div className={styles.group} role="group" aria-label="Sync with Spotify">
-            <label className={styles.toggle}>
-              <input
-                type="checkbox"
-                checked={sync.isEnabled}
+          {spotifyPlayback && isRenderable && alphaTab.status === 'ready' && (
+            <div className={styles.group} role="group" aria-label="Sync with Spotify">
+              <label className={styles.toggle}>
+                <input
+                  type="checkbox"
+                  checked={sync.isEnabled}
+                  onChange={(event) => {
+                    // Two sources of sound at once is never what's wanted.
+                    if (event.target.checked) {
+                      alphaTab.stop()
+                    }
+                    sync.setEnabled(event.target.checked)
+                    event.currentTarget.blur()
+                  }}
+                />
+                <span>Sync with Spotify</span>
+              </label>
+              {sync.isEnabled && (
+                <span className={styles.offset}>
+                  <button
+                    type="button"
+                    className={styles.nudge}
+                    onClick={(event) => {
+                      event.currentTarget.blur()
+                      sync.nudge(-SYNC_NUDGE_MS)
+                    }}
+                    aria-label="Move the tab half a second earlier"
+                  >
+                    −
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.offsetValue}
+                    onClick={(event) => {
+                      event.currentTarget.blur()
+                      sync.resetOffset()
+                    }}
+                    title="Offset from Spotify — click to reset"
+                    aria-label={`Offset ${formatOffset(sync.offsetMs)}, click to reset`}
+                  >
+                    {formatOffset(sync.offsetMs)}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.nudge}
+                    onClick={(event) => {
+                      event.currentTarget.blur()
+                      sync.nudge(SYNC_NUDGE_MS)
+                    }}
+                    aria-label="Move the tab half a second later"
+                  >
+                    +
+                  </button>
+                </span>
+              )}
+              {isFollowing && <span className={styles.syncHint}>Click the note you hear to line up</span>}
+              {isOtherSong && (
+                <span className={styles.warning} role="status">
+                  Spotify is playing another song
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Spotify's transport keeps the middle, whatever sits either side. */}
+        <div className={styles.barCenter}>
+          {playbackControls && (
+            <div className={styles.spotify} role="group" aria-label="Spotify playback">
+              {playbackControls}
+            </div>
+          )}
+        </div>
+
+        <div className={styles.barEnd}>
+          {alphaTab.tracks.length > 1 && (
+            <label className={styles.field}>
+              <span className={styles.label}>Track</span>
+              <select
+                className={styles.select}
+                value={alphaTab.selectedTrackIndex}
                 onChange={(event) => {
-                  // Two sources of sound at once is never what's wanted.
-                  if (event.target.checked) {
-                    alphaTab.stop()
-                  }
-                  sync.setEnabled(event.target.checked)
+                  alphaTab.selectTrack(Number(event.target.value))
                   event.currentTarget.blur()
                 }}
-              />
-              <span>Sync with Spotify</span>
+              >
+                {alphaTab.tracks.map((track) => (
+                  <option key={track.index} value={track.index}>
+                    {track.name || `Track ${track.index + 1}`}
+                  </option>
+                ))}
+              </select>
             </label>
-            {sync.isEnabled && (
-              <span className={styles.offset}>
-                <button
-                  type="button"
-                  className={styles.nudge}
-                  onClick={(event) => {
-                    event.currentTarget.blur()
-                    sync.nudge(-SYNC_NUDGE_MS)
-                  }}
-                  aria-label="Move the tab half a second earlier"
-                >
-                  −
-                </button>
-                <button
-                  type="button"
-                  className={styles.offsetValue}
-                  onClick={(event) => {
-                    event.currentTarget.blur()
-                    sync.resetOffset()
-                  }}
-                  title="Offset from Spotify — click to reset"
-                  aria-label={`Offset ${formatOffset(sync.offsetMs)}, click to reset`}
-                >
-                  {formatOffset(sync.offsetMs)}
-                </button>
-                <button
-                  type="button"
-                  className={styles.nudge}
-                  onClick={(event) => {
-                    event.currentTarget.blur()
-                    sync.nudge(SYNC_NUDGE_MS)
-                  }}
-                  aria-label="Move the tab half a second later"
-                >
-                  +
-                </button>
-              </span>
-            )}
-            {isFollowing && <span className={styles.syncHint}>Click the note you hear to line up</span>}
-            {isOtherSong && (
-              <span className={styles.warning} role="status">
-                Spotify is playing another song
-              </span>
-            )}
-          </div>
-        )}
+          )}
 
-        {alphaTab.tracks.length > 1 && (
-          <label className={styles.field}>
-            <span className={styles.label}>Track</span>
-            <select
-              className={styles.select}
-              value={alphaTab.selectedTrackIndex}
-              onChange={(event) => {
-                alphaTab.selectTrack(Number(event.target.value))
-                event.currentTarget.blur()
-              }}
-            >
-              {alphaTab.tracks.map((track) => (
-                <option key={track.index} value={track.index}>
-                  {track.name || `Track ${track.index + 1}`}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+          {songTabs.length > 1 && (
+            <label className={styles.field}>
+              <span className={styles.label}>Tab</span>
+              <select
+                className={styles.select}
+                value={tab.id}
+                onChange={(event) => {
+                  onSelectTab(event.target.value)
+                  event.currentTarget.blur()
+                }}
+              >
+                {songTabs.map((songTab) => (
+                  <option key={songTab.id} value={songTab.id}>
+                    {songTab.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
-        {songTabs.length > 1 && (
-          <label className={styles.field}>
-            <span className={styles.label}>Tab</span>
-            <select
-              className={styles.select}
-              value={tab.id}
-              onChange={(event) => {
-                onSelectTab(event.target.value)
-                event.currentTarget.blur()
-              }}
-            >
-              {songTabs.map((songTab) => (
-                <option key={songTab.id} value={songTab.id}>
-                  {songTab.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        {onManage && (
-          <button type="button" className={styles.quiet} onClick={onManage}>
-            Manage tabs
-          </button>
-        )}
-
-        {playbackControls && (
-          <div className={styles.spotify} role="group" aria-label="Spotify playback">
-            {playbackControls}
-          </div>
-        )}
+          {onManage && (
+            <button type="button" className={styles.quiet} onClick={onManage}>
+              Manage tabs
+            </button>
+          )}
+        </div>
       </footer>
     </section>
   )

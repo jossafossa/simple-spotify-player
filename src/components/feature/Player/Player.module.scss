@@ -164,26 +164,7 @@
 
 /** Spotify's transport, shrunk to fit the tab viewer's bottom bar. */
 .miniTransport {
-  flex: 0 0 168px;
-}
-
-.miniTrack {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  max-width: 220px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-family: t.$serif;
-  font-size: t.$fs-body;
-  color: t.$text;
-}
-
-.miniLabel {
-  @include t.micro-label;
-
-  color: t.$text-faint;
+  width: 200px;
 }
 
 /** The title row of the card: the label on the left, the tab on the right. */

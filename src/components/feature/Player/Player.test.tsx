@@ -867,7 +867,8 @@ describe('Player', () => {
       const spotify = screen.getByRole('group', { name: 'Spotify playback' })
       await user.click(within(spotify).getByRole('button', { name: 'Pause' }))
 
-      expect(spotify).toHaveTextContent('Song Title')
+      // The song is already named in the viewer's title bar.
+      expect(spotify).not.toHaveTextContent('Song Title')
       expect(togglePlay).toHaveBeenCalledOnce()
       expect(screen.queryByRole('group', { name: 'Sync with Spotify' })).not.toBeInTheDocument()
     })
