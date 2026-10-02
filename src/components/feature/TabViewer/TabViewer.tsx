@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { TempoControl } from '~/components/feature/TempoControl'
+import { Controls } from '~/components/ui/Controls'
 import { useAlphaTab } from '~/hooks/useAlphaTab'
 import { useFullPageView } from '~/hooks/useFullPageView'
+import { useSpaceKey } from '~/hooks/useSpaceKey'
 import { useSpotifyTempo } from '~/hooks/useSpotifyTempo'
 import { useTabTempo } from '~/hooks/useTabTempo'
 import { useTapTempo } from '~/hooks/useTapTempo'
@@ -21,9 +23,7 @@ type TabViewerProps = {
   song: SongRef | undefined
   /** All tabs on that song, to switch between them. */
   songTabs: TabFile[]
-  /** Spotify's own transport, so the song can be played along with. */
-  playbackControls?: ReactNode
-  /** Where Spotify is in its song, for the cursor to follow when sync is on. */
+  /** Spotify's playback, to play along with or for the cursor to follow. */
   spotifyPlayback?: SpotifyPlayback
   /** Set while the tab is only being previewed, not yet on the song. */
   preview?: { onAdd: () => void; isAdding: boolean }
@@ -38,7 +38,13 @@ export type SpotifyPlayback = {
   track: SongRef
   positionMs: number
   isPaused: boolean
+  togglePlay: () => void
+  next: () => void
+  previous: () => void
 }
+
+/** What the transport plays: Spotify, with the cursor following, or the tab itself. */
+type SoundSource = 'spotify' | 'tab'
 
 const SYNC_NUDGE_MS = 500
 
@@ -68,7 +74,6 @@ export const TabViewer = ({
   dataStatus,
   song,
   songTabs,
-  playbackControls,
   spotifyPlayback,
   preview,
   loadSongBpm,
@@ -107,7 +112,29 @@ export const TabViewer = ({
   useEffect(() => {
     alignToRef.current = sync.alignTo
   })
-  const isFollowing = sync.isEnabled && !!spotifyPlayback
+  const canPlayTab = isRenderable && alphaTab.status === 'ready'
+  const canFollowSpotify = canPlayTab && !!spotifyPlayback
+  const isFollowing = canFollowSpotify && sync.isEnabled
+  // A tab that cannot play leaves the transport to Spotify.
+  const soundSource: SoundSource | undefined = isFollowing
+    ? 'spotify'
+    : canPlayTab
+      ? 'tab'
+      : spotifyPlayback
+        ? 'spotify'
+        : undefined
+
+  // Two sources of sound at once is never what's wanted.
+  const chooseSoundSource = (next: SoundSource) => {
+    if (next === 'spotify') {
+      alphaTab.stop()
+    } else if (spotifyPlayback && !spotifyPlayback.isPaused) {
+      spotifyPlayback.togglePlay()
+    }
+    sync.setEnabled(next === 'spotify')
+  }
+
+  useSpaceKey(soundSource === 'tab' ? alphaTab.playPause : undefined)
 
   const notice = (() => {
     if (dataStatus === 'loading') {
@@ -194,58 +221,23 @@ export const TabViewer = ({
 
       <footer className={styles.bottomBar}>
         <div className={styles.barStart}>
-          {isRenderable && alphaTab.status === 'ready' && (
-            <div className={styles.group} role="group" aria-label="Tab playback">
-              <button
-                type="button"
-                className={styles.primary}
-                onClick={(event) => {
-                  event.currentTarget.blur()
-                  alphaTab.playPause()
-                }}
-                disabled={!alphaTab.isPlayerReady || isFollowing}
-                title={
-                  isFollowing
-                    ? 'The tab is following Spotify'
-                    : alphaTab.isPlayerReady
-                      ? undefined
-                      : 'Loading the sound font…'
-                }
-              >
-                {alphaTab.isPlaying ? 'Pause tab' : 'Play tab'}
-              </button>
-              <button
-                type="button"
-                className={styles.ghost}
-                onClick={(event) => {
-                  event.currentTarget.blur()
-                  alphaTab.stop()
-                }}
-                disabled={!alphaTab.isPlayerReady || isFollowing}
-              >
-                Stop
-              </button>
-            </div>
-          )}
-
-          {spotifyPlayback && isRenderable && alphaTab.status === 'ready' && (
-            <div className={styles.group} role="group" aria-label="Sync with Spotify">
-              <label className={styles.toggle}>
-                <input
-                  type="checkbox"
-                  checked={sync.isEnabled}
+          {canFollowSpotify && (
+            <div className={styles.group} role="group" aria-label="Sound">
+              <label className={styles.field}>
+                <span className={styles.label}>Sound</span>
+                <select
+                  className={styles.select}
+                  value={soundSource}
                   onChange={(event) => {
-                    // Two sources of sound at once is never what's wanted.
-                    if (event.target.checked) {
-                      alphaTab.stop()
-                    }
-                    sync.setEnabled(event.target.checked)
+                    chooseSoundSource(event.target.value as SoundSource)
                     event.currentTarget.blur()
                   }}
-                />
-                <span>Sync with Spotify</span>
+                >
+                  <option value="spotify">Spotify</option>
+                  <option value="tab">Tab</option>
+                </select>
               </label>
-              {sync.isEnabled && (
+              {isFollowing && (
                 <span className={styles.offset}>
                   <button
                     type="button"
@@ -288,11 +280,32 @@ export const TabViewer = ({
           )}
         </div>
 
-        {/* Spotify's transport keeps the middle, whatever sits either side. */}
+        {/* The transport keeps the middle, whatever sits either side. */}
         <div className={styles.barCenter}>
-          {playbackControls && (
-            <div className={styles.spotify} role="group" aria-label="Spotify playback">
-              {playbackControls}
+          {soundSource === 'tab' && (
+            <div
+              className={styles.transport}
+              role="group"
+              aria-label="Tab playback"
+              title={alphaTab.isPlayerReady ? undefined : 'Loading the sound font…'}
+            >
+              <Controls
+                isPaused={!alphaTab.isPlaying}
+                onTogglePlay={alphaTab.playPause}
+                isPlayDisabled={!alphaTab.isPlayerReady}
+                onPrevious={alphaTab.stop}
+                previousLabel="Back to the start"
+              />
+            </div>
+          )}
+          {soundSource === 'spotify' && spotifyPlayback && (
+            <div className={styles.transport} role="group" aria-label="Spotify playback">
+              <Controls
+                isPaused={spotifyPlayback.isPaused}
+                onTogglePlay={spotifyPlayback.togglePlay}
+                onNext={spotifyPlayback.next}
+                onPrevious={spotifyPlayback.previous}
+              />
             </div>
           )}
         </div>

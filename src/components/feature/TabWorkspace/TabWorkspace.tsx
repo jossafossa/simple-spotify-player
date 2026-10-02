@@ -2,7 +2,6 @@ import { OnlineTabSearch } from '~/components/feature/OnlineTabSearch'
 import { TabLibrary } from '~/components/feature/TabLibrary'
 import { TabPicker } from '~/components/feature/TabPicker'
 import { TabViewer, type SpotifyPlayback } from '~/components/feature/TabViewer'
-import type { ReactNode } from 'react'
 import { onlineQueryFor, type UseTabWorkspaceResult } from '~/hooks/useTabWorkspace'
 import type { SongRef, TabSong } from '~/lib/types'
 
@@ -78,14 +77,12 @@ export const TabDialogs = ({ workspace, onPlaySong }: TabDialogsProps) => {
 
 type TabViewerSlotProps = {
   workspace: UseTabWorkspaceResult
-  playbackControls?: ReactNode
   spotifyPlayback?: SpotifyPlayback
   loadSongBpm?: (song: SongRef) => Promise<number | undefined>
 }
 
 export const TabViewerSlot = ({
   workspace,
-  playbackControls,
   spotifyPlayback,
   loadSongBpm,
 }: TabViewerSlotProps) => {
@@ -100,7 +97,6 @@ export const TabViewerSlot = ({
         dataStatus={preview.dataStatus}
         song={preview.song}
         songTabs={[]}
-        playbackControls={playbackControls}
         spotifyPlayback={spotifyPlayback}
         preview={{ onAdd: workspace.addPreviewed, isAdding: preview.isAdding }}
         loadSongBpm={loadSongBpm}
@@ -126,7 +122,6 @@ export const TabViewerSlot = ({
       dataStatus={openTab.data.status}
       song={song}
       songTabs={openTab.songTabs}
-      playbackControls={playbackControls}
       spotifyPlayback={spotifyPlayback}
       loadSongBpm={loadSongBpm}
       onSelectTab={(tabId) => workspace.openTabInViewer(song, tabId)}

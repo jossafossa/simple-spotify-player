@@ -227,24 +227,9 @@
   align-self: center;
 }
 
-.spotify {
-  display: flex;
-  align-items: center;
-  gap: t.$s-3;
-}
-
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: t.$s-2;
-  font-size: t.$fs-small;
-  color: t.$text-muted;
-  cursor: pointer;
-
-  input {
-    accent-color: t.$accent;
-    cursor: pointer;
-  }
+/** Fixed wide, so swapping the sound source does not shift the bar. */
+.transport {
+  width: 200px;
 }
 
 .offset {

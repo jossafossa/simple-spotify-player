@@ -1,4 +1,4 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAlphaTab, type UseAlphaTabResult } from '~/hooks/useAlphaTab'
@@ -37,6 +37,14 @@ const buildTab = (id: string, format: TabFile['format'] = 'guitar-pro'): TabFile
 })
 
 const song = { uri: 'spotify:track:nemo', name: 'Nemo', artistNames: ['Nightwish'] }
+const buildSpotifyPlayback = () => ({
+  track: song,
+  positionMs: 12_000,
+  isPaused: false,
+  togglePlay: vi.fn(),
+  next: vi.fn(),
+  previous: vi.fn(),
+})
 const data = new Uint8Array([1]).buffer
 
 const renderViewer = (props: Partial<React.ComponentProps<typeof TabViewer>> = {}) => {
@@ -100,12 +108,21 @@ describe('TabViewer', () => {
     dialog.remove()
   })
 
-  it('puts Spotify’s transport in the bottom bar when given one', () => {
-    const { getByRole } = renderViewer({ playbackControls: <button type="button">Spotify play</button> })
+  it('leaves the transport to Spotify for a tab that cannot play', async () => {
+    const user = userEvent.setup()
+    const spotifyPlayback = buildSpotifyPlayback()
+    const { getByRole, queryByRole } = renderViewer({
+      tab: buildTab('p', 'power-tab'),
+      spotifyPlayback,
+    })
 
-    expect(getByRole('group', { name: 'Spotify playback' })).toContainElement(
-      getByRole('button', { name: 'Spotify play' }),
-    )
+    expect(queryByRole('combobox', { name: 'Sound' })).not.toBeInTheDocument()
+    const spotify = getByRole('group', { name: 'Spotify playback' })
+    await user.click(within(spotify).getByRole('button', { name: 'Pause' }))
+    await user.click(within(spotify).getByRole('button', { name: 'Next track' }))
+
+    expect(spotifyPlayback.togglePlay).toHaveBeenCalledOnce()
+    expect(spotifyPlayback.next).toHaveBeenCalledOnce()
   })
 
   it('starts on the remembered track and remembers the one picked', () => {
@@ -125,26 +142,38 @@ describe('TabViewer', () => {
     expect(mockedUseAlphaTab).toHaveBeenLastCalledWith(expect.anything(), data, expect.anything())
   })
 
-  it('plays, stops and switches track', async () => {
+  it('plays the tab from the transport, goes back to its start, and switches track', async () => {
     const user = userEvent.setup()
     const result = alphaTabResult()
     mockedUseAlphaTab.mockReturnValue(result)
     const { getByRole } = renderViewer()
 
-    await user.click(getByRole('button', { name: 'Play tab' }))
-    await user.click(getByRole('button', { name: 'Stop' }))
+    const transport = getByRole('group', { name: 'Tab playback' })
+    await user.click(within(transport).getByRole('button', { name: 'Play' }))
+    await user.click(within(transport).getByRole('button', { name: 'Back to the start' }))
     await user.selectOptions(getByRole('combobox', { name: 'Track' }), 'Bass')
 
+    expect(within(transport).queryByRole('button', { name: 'Next track' })).not.toBeInTheDocument()
     expect(result.playPause).toHaveBeenCalledOnce()
     expect(result.stop).toHaveBeenCalledOnce()
     expect(result.selectTrack).toHaveBeenCalledWith(1)
+  })
+
+  it('plays and pauses the tab with Space', () => {
+    const result = alphaTabResult()
+    mockedUseAlphaTab.mockReturnValue(result)
+    renderViewer()
+
+    fireEvent.keyDown(document.body, { key: ' ' })
+
+    expect(result.playPause).toHaveBeenCalledOnce()
   })
 
   it('waits for the sound font before it can play', () => {
     mockedUseAlphaTab.mockReturnValue(alphaTabResult({ isPlayerReady: false }))
     const { getByRole } = renderViewer()
 
-    expect(getByRole('button', { name: 'Play tab' })).toBeDisabled()
+    expect(getByRole('button', { name: 'Play' })).toBeDisabled()
   })
 
   it('switches between the song’s tabs, and manages or closes them', async () => {
@@ -193,36 +222,48 @@ describe('TabViewer', () => {
   })
 
   describe('sync with Spotify', () => {
-    const spotifyPlayback = { track: song, positionMs: 12_000, isPaused: false }
-
     it('is only offered when Spotify is playing', () => {
       const { queryByRole } = renderViewer()
 
-      expect(queryByRole('checkbox', { name: 'Sync with Spotify' })).not.toBeInTheDocument()
+      expect(queryByRole('combobox', { name: 'Sound' })).not.toBeInTheDocument()
     })
 
-    it('follows Spotify instead of playing the tab itself', async () => {
+    it('plays Spotify from the transport, with the tab following it', async () => {
       const user = userEvent.setup()
       const result = alphaTabResult()
       mockedUseAlphaTab.mockReturnValue(result)
-      const { getByRole } = renderViewer({ spotifyPlayback })
+      const spotifyPlayback = buildSpotifyPlayback()
+      const { getByRole, queryByRole } = renderViewer({ spotifyPlayback })
 
-      await user.click(getByRole('checkbox', { name: 'Sync with Spotify' }))
+      await user.selectOptions(getByRole('combobox', { name: 'Sound' }), 'Spotify')
 
       expect(result.stop).toHaveBeenCalledOnce()
       expect(result.seekTo).toHaveBeenLastCalledWith(12_000)
-      expect(getByRole('button', { name: 'Play tab' })).toBeDisabled()
-      expect(getByRole('group', { name: 'Sync with Spotify' })).toHaveTextContent(
-        'Click the note you hear to line up',
-      )
+      expect(queryByRole('group', { name: 'Tab playback' })).not.toBeInTheDocument()
+      const spotify = getByRole('group', { name: 'Spotify playback' })
+      await user.click(within(spotify).getByRole('button', { name: 'Previous track' }))
+      expect(spotifyPlayback.previous).toHaveBeenCalledOnce()
+      expect(getByRole('group', { name: 'Sound' })).toHaveTextContent('Click the note you hear to line up')
+    })
+
+    it('pauses Spotify when the tab becomes the sound', async () => {
+      const user = userEvent.setup()
+      const spotifyPlayback = buildSpotifyPlayback()
+      const { getByRole } = renderViewer({ spotifyPlayback })
+      await user.selectOptions(getByRole('combobox', { name: 'Sound' }), 'Spotify')
+
+      await user.selectOptions(getByRole('combobox', { name: 'Sound' }), 'Tab')
+
+      expect(spotifyPlayback.togglePlay).toHaveBeenCalledOnce()
+      expect(getByRole('group', { name: 'Tab playback' })).toBeInTheDocument()
     })
 
     it('aligns to a clicked beat', async () => {
       const user = userEvent.setup()
       const result = alphaTabResult()
       mockedUseAlphaTab.mockReturnValue(result)
-      const { getByRole } = renderViewer({ spotifyPlayback })
-      await user.click(getByRole('checkbox', { name: 'Sync with Spotify' }))
+      const { getByRole } = renderViewer({ spotifyPlayback: buildSpotifyPlayback() })
+      await user.selectOptions(getByRole('combobox', { name: 'Sound' }), 'Spotify')
 
       const { onBeatClick } = mockedUseAlphaTab.mock.lastCall![2]!
       act(() => onBeatClick!(15_000))
@@ -234,8 +275,8 @@ describe('TabViewer', () => {
       const user = userEvent.setup()
       const result = alphaTabResult()
       mockedUseAlphaTab.mockReturnValue(result)
-      const { getByRole } = renderViewer({ spotifyPlayback })
-      await user.click(getByRole('checkbox', { name: 'Sync with Spotify' }))
+      const { getByRole } = renderViewer({ spotifyPlayback: buildSpotifyPlayback() })
+      await user.selectOptions(getByRole('combobox', { name: 'Sound' }), 'Spotify')
 
       await user.click(getByRole('button', { name: 'Move the tab half a second later' }))
       await user.click(getByRole('button', { name: 'Move the tab half a second later' }))

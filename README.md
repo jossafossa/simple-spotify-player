@@ -70,12 +70,11 @@ Tabs are linked to songs and stored in the browser — no server involved.
   A track with tabs keeps its TAB button lit, and clicking it opens the tab.
 - **Viewing** — the tab opens as a full-page view, drawn as notation and
   tablature by [alphaTab](https://alphatab.net/). All controls sit in a bar
-  along the bottom: *Play tab* plays it through alphaTab's own synthesizer
-  (with a following cursor), separately from Spotify; pick another instrument
-  track or another tab on the song; and Spotify's own play/previous/next to
-  play along. *← Back to player* (or Escape) returns. A song with several
-  tabs opens on the one last picked for it; the instrument track picked is
-  remembered per tab.
+  along the bottom: the transport in the middle plays whichever *Sound* is
+  picked; pick another instrument track or another tab on the song.
+  *← Back to player* (or Escape) returns. A song with several tabs opens on
+  the one last picked for it; the instrument track picked is remembered per
+  tab.
 - **Preview** — every free online result, and every library tab not yet on
   the song, has *Preview*: it opens full page without storing or linking
   anything. *Add to this song* in its top bar adds it (an online file is
@@ -84,10 +83,11 @@ Tabs are linked to songs and stored in the browser — no server involved.
   along: to that song's tab if it has one, back to the player if it does not.
   A tab opened for another song stays until the song changes; a preview stays
   open regardless.
-- **Sync with Spotify** — optional, off by default: tick *Sync with
-  Spotify* in the tab view's bottom bar and the cursor follows the song
-  playing in Spotify instead of the tab's own player, scrolling along and
-  jumping when you seek. A transcription seldom lines up exactly with the
+- **Sound** — *Tab* (the default) plays the tab through alphaTab's own
+  synthesizer, with a following cursor; previous goes back to its start, and
+  Space plays and pauses it. *Spotify* plays the song in Spotify instead, its
+  play/previous/next in the transport, and the cursor follows it, scrolling
+  along and jumping when you seek. A transcription seldom lines up exactly with the
   recording, so − / + nudge the tab half a second at a time (click the value
   to reset); the offset is remembered per tab. A tab written at another
   tempo than the recording drifts apart as the song goes on; set the tempo

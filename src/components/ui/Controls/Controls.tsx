@@ -3,8 +3,12 @@ import styles from './Controls.module.scss'
 type ControlsProps = {
   isPaused: boolean
   onTogglePlay: () => void
-  onNext: () => void
+  /** Left out where there is nothing to skip to. */
+  onNext?: () => void
   onPrevious: () => void
+  previousLabel?: string
+  /** While what plays cannot play yet, such as a sound font still loading. */
+  isPlayDisabled?: boolean
   /** The shuffle button only appears when there is something to toggle. */
   isShuffled?: boolean
   onToggleShuffle?: () => void
@@ -15,6 +19,8 @@ export const Controls = ({
   onTogglePlay,
   onNext,
   onPrevious,
+  previousLabel = 'Previous track',
+  isPlayDisabled = false,
   isShuffled = false,
   onToggleShuffle,
 }: ControlsProps) => (
@@ -36,7 +42,7 @@ export const Controls = ({
       type="button"
       className={styles.button}
       onClick={onPrevious}
-      aria-label="Previous track"
+      aria-label={previousLabel}
     >
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
         <path d="M6 6h2v12H6zm3.5 6 10.5 6.5v-13z" />
@@ -46,6 +52,7 @@ export const Controls = ({
       type="button"
       className={`${styles.button} ${styles.playButton}`}
       onClick={onTogglePlay}
+      disabled={isPlayDisabled}
       aria-label={isPaused ? 'Play' : 'Pause'}
     >
       {isPaused ? (
@@ -58,10 +65,12 @@ export const Controls = ({
         </svg>
       )}
     </button>
-    <button type="button" className={styles.button} onClick={onNext} aria-label="Next track">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M16 6h2v12h-2zM4 6l10.5 6.5L4 19z" />
-      </svg>
-    </button>
+    {onNext && (
+      <button type="button" className={styles.button} onClick={onNext} aria-label="Next track">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M16 6h2v12h-2zM4 6l10.5 6.5L4 19z" />
+        </svg>
+      </button>
+    )}
   </div>
 )
