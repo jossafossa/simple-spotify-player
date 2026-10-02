@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { TempoControl } from '~/components/feature/TempoControl'
 import { useAlphaTab } from '~/hooks/useAlphaTab'
 import { useFullPageView } from '~/hooks/useFullPageView'
+import { useSpotifyTempo } from '~/hooks/useSpotifyTempo'
+import { useTabTempo } from '~/hooks/useTabTempo'
+import { useTapTempo } from '~/hooks/useTapTempo'
+import { clampBpm } from '~/lib/tempo'
 import { useTabSync } from '~/hooks/useTabSync'
 import type { TabDataStatus } from '~/hooks/useTabData'
 import { readTabSettings, saveTabSettings } from '~/lib/tabSettingsStorage'
@@ -22,6 +27,8 @@ type TabViewerProps = {
   spotifyPlayback?: SpotifyPlayback
   /** Set while the tab is only being previewed, not yet on the song. */
   preview?: { onAdd: () => void; isAdding: boolean }
+  /** Asks Spotify for the tempo it measured for a song. */
+  loadSongBpm?: (song: SongRef) => Promise<number | undefined>
   onSelectTab: (tabId: string) => void
   onManage: (() => void) | undefined
   onClose: () => void
@@ -64,6 +71,7 @@ export const TabViewer = ({
   playbackControls,
   spotifyPlayback,
   preview,
+  loadSongBpm,
   onSelectTab,
   onManage,
   onClose,
@@ -74,11 +82,21 @@ export const TabViewer = ({
   // The sync below needs alphaTab, and alphaTab reports clicks to the sync,
   // so the click is relayed through a ref set once the sync exists.
   const alignToRef = useRef<(tabTimeMs: number) => void>(() => {})
+  const tempo = useTabTempo(tab.id)
   const alphaTab = useAlphaTab({ container, scrollElement }, isRenderable ? data : undefined, {
     onBeatClick: (tabTimeMs) => alignToRef.current(tabTimeMs),
     initialTrackIndex: readTabSettings(tab.id).trackIndex,
     onTrackSelect: (trackIndex) => saveTabSettings(tab.id, { trackIndex }),
+    bpm: tempo.bpm,
   })
+  // The score's own tempo is the default, so it is not remembered as set.
+  const setBpm = (bpm: number) =>
+    clampBpm(bpm) === alphaTab.scoreBpm ? tempo.reset() : tempo.setBpm(bpm)
+  const tap = useTapTempo(setBpm)
+  const spotifyTempo = useSpotifyTempo(
+    song && loadSongBpm ? () => loadSongBpm(song) : undefined,
+    setBpm,
+  )
   useFullPageView(onClose)
   const sync = useTabSync({
     tabId: tab.id,
@@ -280,6 +298,22 @@ export const TabViewer = ({
         </div>
 
         <div className={styles.barEnd}>
+          {isRenderable && alphaTab.status === 'ready' && alphaTab.scoreBpm && (
+            <TempoControl
+              bpm={tempo.bpm ?? alphaTab.scoreBpm}
+              scoreBpm={alphaTab.scoreBpm}
+              isSet={tempo.bpm !== undefined}
+              onChange={setBpm}
+              onTap={tap}
+              onReset={tempo.reset}
+              spotify={
+                song && loadSongBpm
+                  ? { status: spotifyTempo.status, onRequest: spotifyTempo.request }
+                  : undefined
+              }
+            />
+          )}
+
           {alphaTab.tracks.length > 1 && (
             <label className={styles.field}>
               <span className={styles.label}>Track</span>

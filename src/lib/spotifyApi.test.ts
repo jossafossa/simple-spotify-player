@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   fetchContextPlaylist,
+  fetchTrackTempo,
   isSupportedContext,
   parseContextUri,
   fetchUserPlaylists,
@@ -353,5 +354,36 @@ describe('setShuffle', () => {
 
     const [url] = fetchMock.mock.calls[0]! as unknown as [string]
     expect(url).toBe('https://api.spotify.com/v1/me/player/shuffle?state=false')
+  })
+})
+
+describe('fetchTrackTempo', () => {
+  it("reads the track's tempo from its audio features", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse({ tempo: 123.45 })))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchTrackTempo('token', 'spotify:track:track-1')).resolves.toBe(123.45)
+    const [url] = fetchMock.mock.calls[0]! as unknown as [string]
+    expect(url).toBe('https://api.spotify.com/v1/audio-features/track-1')
+  })
+
+  it('has no tempo for a track Spotify could not measure', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(jsonResponse({ tempo: 0 }))))
+
+    await expect(fetchTrackTempo('token', 'spotify:track:track-1')).resolves.toBeUndefined()
+  })
+
+  it('has no tempo for anything but a Spotify track', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchTrackTempo('token', 'spotify:local:a:b:c:1')).resolves.toBeUndefined()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('rejects with the status when Spotify refuses this app audio features', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(errorResponse(403))))
+
+    await expect(fetchTrackTempo('token', 'spotify:track:track-1')).rejects.toMatchObject({ status: 403 })
   })
 })

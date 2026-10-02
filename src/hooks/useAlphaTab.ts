@@ -11,6 +11,8 @@ export type ScoreTrack = {
 export type UseAlphaTabResult = {
   status: AlphaTabStatus
   title: string | undefined
+  /** The tempo the score starts at, in beats per minute. */
+  scoreBpm: number | undefined
   tracks: ScoreTrack[]
   selectedTrackIndex: number
   selectTrack: (index: number) => void
@@ -36,6 +38,12 @@ type AlphaTabOptions = {
    * alphaTab moves its cursor there.
    */
   onBeatClick?: (timeMs: number) => void
+  /**
+   * The tempo to play at, when not the score's own. alphaTab reports and
+   * takes every time at the speed this sets, so it also stretches the
+   * timeline that sync follows.
+   */
+  bpm?: number
 }
 
 type AlphaTabElements = {
@@ -52,13 +60,14 @@ type AlphaTabElements = {
 export const useAlphaTab = (
   { container, scrollElement }: AlphaTabElements,
   data: ArrayBuffer | undefined,
-  { onBeatClick, initialTrackIndex = 0, onTrackSelect }: AlphaTabOptions = {},
+  { onBeatClick, initialTrackIndex = 0, onTrackSelect, bpm }: AlphaTabOptions = {},
 ): UseAlphaTabResult => {
   // Only ever driven imperatively, never rendered, so a ref rather than state.
   const apiRef = useRef<AlphaTabApi | undefined>(undefined)
   const [loadedData, setLoadedData] = useState<ArrayBuffer>()
   const [status, setStatus] = useState<Exclude<AlphaTabStatus, 'idle' | 'loading'>>()
   const [title, setTitle] = useState<string>()
+  const [scoreBpm, setScoreBpm] = useState<number>()
   const [tracks, setTracks] = useState<ScoreTrack[]>([])
   const [selectedTrackIndex, setSelectedTrackIndex] = useState(0)
   const [isPlayerReady, setIsPlayerReady] = useState(false)
@@ -86,6 +95,7 @@ export const useAlphaTab = (
     setLoadedData(data)
     setStatus(undefined)
     setTitle(undefined)
+    setScoreBpm(undefined)
     setTracks([])
     setSelectedTrackIndex(0)
     setIsPlayerReady(false)
@@ -121,6 +131,7 @@ export const useAlphaTab = (
 
         instance.scoreLoaded.on((score) => {
           setTitle(score.title || undefined)
+          setScoreBpm(score.tempo > 0 ? score.tempo : undefined)
           setTracks(score.tracks.map((track) => ({ index: track.index, name: track.name })))
 
           // A remembered track the file no longer has falls back to the first.
@@ -181,6 +192,15 @@ export const useAlphaTab = (
     }
   }, [container, scrollElement, data])
 
+  const playbackSpeed = bpm && scoreBpm ? bpm / scoreBpm : 1
+
+  // Set again once a score is in, since a new file means a new instance.
+  useEffect(() => {
+    if (apiRef.current) {
+      apiRef.current.playbackSpeed = playbackSpeed
+    }
+  }, [playbackSpeed, status])
+
   const selectTrack = (index: number) => {
     const api = apiRef.current
     const track = api?.score?.tracks[index]
@@ -216,6 +236,7 @@ export const useAlphaTab = (
   return {
     status: !data ? 'idle' : (status ?? 'loading'),
     title,
+    scoreBpm,
     tracks,
     selectedTrackIndex,
     selectTrack,

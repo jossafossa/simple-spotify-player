@@ -20,6 +20,7 @@ import { useTabWorkspace } from '~/hooks/useTabWorkspace'
 import { useTickingPosition } from '~/hooks/useTickingPosition'
 import { useUserPlaylists } from '~/hooks/useUserPlaylists'
 import { useVolumeControl } from '~/hooks/useVolumeControl'
+import { fetchTrackTempo } from '~/lib/spotifyApi'
 import type { PlaybackTrack, SongRef } from '~/lib/types'
 import styles from './Player.module.scss'
 
@@ -253,7 +254,12 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     )
 
   /** Everything around the content: the bar, notices, the shortcuts, the tab view and dialogs. */
-  const shell = (content: ReactNode, viewer: ReactNode = <TabViewerSlot workspace={tabs} />) => (
+  const loadSongBpm = (song: SongRef) => fetchTrackTempo(accessToken, song.uri)
+
+  const shell = (
+    content: ReactNode,
+    viewer: ReactNode = <TabViewerSlot workspace={tabs} loadSongBpm={loadSongBpm} />,
+  ) => (
     <div className={styles.screen}>
       {appBar}
       {notices}
@@ -364,6 +370,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     </div>,
     <TabViewerSlot
       workspace={tabs}
+      loadSongBpm={loadSongBpm}
       spotifyPlayback={{
         track: songOf(playbackState.track),
         positionMs,

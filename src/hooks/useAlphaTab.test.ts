@@ -24,6 +24,7 @@ class FakeAlphaTabApi {
   playerPositionChanged = emitter()
   beatMouseDown = emitter()
   timePosition = 0
+  playbackSpeed = 1
   scrollToCursor = vi.fn()
   score = { tracks: [{ index: 0 }, { index: 1 }] }
   load = vi.fn(() => FakeAlphaTabApi.loadResult)
@@ -59,15 +60,20 @@ const renderReady = async (
   onBeatClick?: (timeMs: number) => void,
   trackOptions: { initialTrackIndex?: number; onTrackSelect?: (index: number) => void } = {},
 ) => {
-  const view = renderHook(({ input }) => useAlphaTab(input.elements, input.data, { onBeatClick, ...trackOptions }), {
-    initialProps: { input: { elements: elements(), data: data as ArrayBuffer | undefined } },
-  })
+  const input = { elements: elements(), data: data as ArrayBuffer | undefined }
+  type Props = { input: typeof input; bpm?: number }
+  const view = renderHook(
+    (props: Props) =>
+      useAlphaTab(props.input.elements, props.input.data, { onBeatClick, bpm: props.bpm, ...trackOptions }),
+    { initialProps: { input } as Props },
+  )
   await waitFor(() => expect(FakeAlphaTabApi.instances).toHaveLength(1))
   const api = FakeAlphaTabApi.instances[0]!
 
   act(() => {
     api.scoreLoaded.emit({
       title: 'Nemo',
+      tempo: 120,
       tracks: [
         { index: 0, name: 'Guitar' },
         { index: 1, name: 'Bass' },
@@ -76,7 +82,7 @@ const renderReady = async (
     api.renderFinished.emit()
   })
 
-  return { ...view, api }
+  return { ...view, api, input }
 }
 
 describe('useAlphaTab', () => {
@@ -109,6 +115,16 @@ describe('useAlphaTab', () => {
       { index: 0, name: 'Guitar' },
       { index: 1, name: 'Bass' },
     ])
+  })
+
+  it("reports the score's tempo, and plays at another when asked", async () => {
+    const { result, api, input, rerender } = await renderReady()
+
+    expect(result.current.scoreBpm).toBe(120)
+    expect(api.playbackSpeed).toBe(1)
+
+    rerender({ input, bpm: 90 })
+    expect(api.playbackSpeed).toBe(0.75)
   })
 
   it('switches track, stopping playback first, and reports it', async () => {

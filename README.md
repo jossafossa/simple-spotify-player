@@ -87,8 +87,17 @@ Tabs are linked to songs and stored in the browser — no server involved.
   playing in Spotify instead of the tab's own player, scrolling along and
   jumping when you seek. A transcription seldom lines up exactly with the
   recording, so − / + nudge the tab half a second at a time (click the value
-  to reset); the offset is remembered per tab. A tempo that drifts apart
-  within the song cannot be corrected this way.
+  to reset); the offset is remembered per tab. A tab written at another
+  tempo than the recording drifts apart as the song goes on; set the tempo
+  (below) to fix that.
+- **Tempo** — *BPM* in the bottom bar starts at the tempo the tab is written
+  in. Type the recording's tempo, tap **Tap** (or press T) along with the
+  beat, or ask **Spotify** for the tempo it measured. The tab then plays at
+  that tempo, and a synced cursor keeps pace with the recording instead of
+  drifting off. *Tab: 120* goes back to the written tempo; a set tempo is
+  remembered per tab. Spotify only gives tempos to apps registered before
+  27 November 2024 — for newer ones it answers 403, and the button goes away
+  for good. Tempo changes inside a recording cannot be followed this way.
 - **Finding tabs** — the add-tab dialog searches tab sites for the song
   when you press *Search* (artist and title prefilled, with Spotify's
   "- Remastered 2021" and "(feat. …)" stripped). **Free to download** results — from
@@ -125,6 +134,7 @@ start and build, which is why those folders are git-ignored.
 | M         | Mute / unmute    |
 | S         | Shuffle on / off |
 | N / P     | Next / previous  |
+| T         | Tap tempo (tab view) |
 
 ## Running
 

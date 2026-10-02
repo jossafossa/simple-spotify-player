@@ -4,7 +4,7 @@ import { TabPicker } from '~/components/feature/TabPicker'
 import { TabViewer, type SpotifyPlayback } from '~/components/feature/TabViewer'
 import type { ReactNode } from 'react'
 import { onlineQueryFor, type UseTabWorkspaceResult } from '~/hooks/useTabWorkspace'
-import type { TabSong } from '~/lib/types'
+import type { SongRef, TabSong } from '~/lib/types'
 
 type TabDialogsProps = {
   workspace: UseTabWorkspaceResult
@@ -80,9 +80,15 @@ type TabViewerSlotProps = {
   workspace: UseTabWorkspaceResult
   playbackControls?: ReactNode
   spotifyPlayback?: SpotifyPlayback
+  loadSongBpm?: (song: SongRef) => Promise<number | undefined>
 }
 
-export const TabViewerSlot = ({ workspace, playbackControls, spotifyPlayback }: TabViewerSlotProps) => {
+export const TabViewerSlot = ({
+  workspace,
+  playbackControls,
+  spotifyPlayback,
+  loadSongBpm,
+}: TabViewerSlotProps) => {
   const { openTab, preview } = workspace
 
   if (preview) {
@@ -97,6 +103,7 @@ export const TabViewerSlot = ({ workspace, playbackControls, spotifyPlayback }: 
         playbackControls={playbackControls}
         spotifyPlayback={spotifyPlayback}
         preview={{ onAdd: workspace.addPreviewed, isAdding: preview.isAdding }}
+        loadSongBpm={loadSongBpm}
         onSelectTab={() => {}}
         onManage={undefined}
         onClose={workspace.closePreview}
@@ -121,6 +128,7 @@ export const TabViewerSlot = ({ workspace, playbackControls, spotifyPlayback }: 
       songTabs={openTab.songTabs}
       playbackControls={playbackControls}
       spotifyPlayback={spotifyPlayback}
+      loadSongBpm={loadSongBpm}
       onSelectTab={(tabId) => workspace.openTabInViewer(song, tabId)}
       onManage={song ? () => workspace.openPicker(song) : undefined}
       onClose={workspace.closeViewer}

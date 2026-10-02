@@ -1,4 +1,4 @@
-import { act, render } from '@testing-library/react'
+import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAlphaTab, type UseAlphaTabResult } from '~/hooks/useAlphaTab'
@@ -12,6 +12,7 @@ const mockedUseAlphaTab = vi.mocked(useAlphaTab)
 const alphaTabResult = (overrides: Partial<UseAlphaTabResult> = {}): UseAlphaTabResult => ({
   status: 'ready',
   title: 'Nemo (score title)',
+  scoreBpm: 120,
   tracks: [
     { index: 0, name: 'Guitar' },
     { index: 1, name: 'Bass' },
@@ -280,6 +281,77 @@ describe('TabViewer', () => {
       })
 
       expect(getByText(/could not be downloaded to preview/)).toBeInTheDocument()
+    })
+  })
+
+  describe('tempo', () => {
+    const lastBpmOption = () => mockedUseAlphaTab.mock.lastCall?.[2]?.bpm
+
+    it("starts at the score's own tempo", () => {
+      const { getByRole, queryByRole } = renderViewer()
+
+      expect(getByRole('spinbutton', { name: 'BPM' })).toHaveValue(120)
+      expect(lastBpmOption()).toBeUndefined()
+      expect(queryByRole('button', { name: /Tab: 120/ })).not.toBeInTheDocument()
+    })
+
+    it('plays at a typed tempo, remembered for the tab, until reset', async () => {
+      const user = userEvent.setup()
+      const { getByRole, unmount } = renderViewer()
+
+      const input = getByRole('spinbutton', { name: 'BPM' })
+      await user.clear(input)
+      await user.type(input, '126{Enter}')
+      expect(lastBpmOption()).toBe(126)
+      unmount()
+
+      const again = renderViewer()
+      expect(again.getByRole('spinbutton', { name: 'BPM' })).toHaveValue(126)
+      await user.click(again.getByRole('button', { name: 'Tab: 120' }))
+      expect(lastBpmOption()).toBeUndefined()
+    })
+
+    it('ignores a tempo that is not a number', async () => {
+      const user = userEvent.setup()
+      const { getByRole } = renderViewer()
+
+      const input = getByRole('spinbutton', { name: 'BPM' })
+      await user.clear(input)
+      await user.tab()
+
+      expect(input).toHaveValue(120)
+      expect(lastBpmOption()).toBeUndefined()
+    })
+
+    it('takes the tempo from taps on the beat', () => {
+      let now = 0
+      vi.spyOn(performance, 'now').mockImplementation(() => now)
+      const { getByRole } = renderViewer()
+
+      const tap = getByRole('button', { name: 'Tap' })
+      fireEvent.pointerDown(tap)
+      now = 600
+      fireEvent.pointerDown(tap)
+
+      expect(lastBpmOption()).toBe(100)
+      vi.mocked(performance.now).mockRestore()
+    })
+
+    it("asks Spotify for the song's tempo", async () => {
+      const user = userEvent.setup()
+      const loadSongBpm = vi.fn(() => Promise.resolve(118.2))
+      const { getByRole } = renderViewer({ loadSongBpm })
+
+      await user.click(getByRole('button', { name: 'Spotify' }))
+
+      expect(loadSongBpm).toHaveBeenCalledWith(song)
+      await waitFor(() => expect(lastBpmOption()).toBe(118.2))
+    })
+
+    it('offers no Spotify tempo without a song to ask about', () => {
+      const { queryByRole } = renderViewer({ loadSongBpm: vi.fn(), song: undefined })
+
+      expect(queryByRole('button', { name: 'Spotify' })).not.toBeInTheDocument()
     })
   })
 })

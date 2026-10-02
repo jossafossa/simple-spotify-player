@@ -334,3 +334,29 @@ export const setShuffle = ({ accessToken, isShuffled, deviceId }: SetShufflePara
 
   return request(accessToken, `/me/player/shuffle?${query}`, { method: 'PUT' })
 }
+
+type ApiAudioFeatures = {
+  tempo?: number | null
+}
+
+/**
+ * The tempo Spotify measured for a track, by its URI. Spotify stopped serving
+ * audio features to apps registered after 27 November 2024, which get a 403.
+ */
+export const fetchTrackTempo = async (
+  accessToken: string,
+  trackUri: string,
+): Promise<number | undefined> => {
+  const track = parseContextUri(trackUri)
+  if (track?.type !== 'track') {
+    return undefined
+  }
+
+  const features = await request<ApiAudioFeatures | undefined>(
+    accessToken,
+    `/audio-features/${encodeURIComponent(track.id)}`,
+  )
+  const tempo = features?.tempo
+
+  return tempo && tempo > 0 ? tempo : undefined
+}

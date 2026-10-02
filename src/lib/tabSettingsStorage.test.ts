@@ -22,6 +22,13 @@ describe('tab settings storage', () => {
     expect(readTabSettings('unknown')).toEqual({})
   })
 
+  it('remembers a tempo within range, and ignores one outside it', () => {
+    saveTabSettings('a', { bpm: 121.5 })
+    expect(readTabSettings('a')).toEqual({ bpm: 121.5 })
+
+    expect(parseAllTabSettings({ a: { bpm: 2 }, b: { bpm: 'fast' } })).toEqual({})
+  })
+
   it('forgets values that are back at their default', () => {
     saveTabSettings('a', { offsetMs: 500, trackIndex: 2 })
 

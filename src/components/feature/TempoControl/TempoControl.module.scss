@@ -1,0 +1,51 @@
+@use '../../theme' as t;
+
+.tempo {
+  display: flex;
+  align-items: center;
+  gap: t.$s-1;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: t.$s-2;
+}
+
+.label {
+  @include t.micro-label;
+
+  color: t.$text-faint;
+}
+
+.input {
+  @include t.numerals;
+  @include t.focus-ring(1px);
+
+  width: 7ch;
+  padding: t.$s-1 t.$s-2;
+  border: 1px solid t.$rule;
+  border-radius: t.$radius-sm;
+  background: t.$ink-well;
+  color: t.$text;
+  font-size: t.$fs-small;
+}
+
+.button,
+.reset {
+  @include t.button-ghost;
+
+  padding: t.$s-1 t.$s-2;
+  letter-spacing: 0;
+}
+
+.reset {
+  @include t.numerals;
+
+  text-transform: none;
+}
+
+.notice {
+  font-size: t.$fs-fine;
+  color: t.$text-faint;
+}
