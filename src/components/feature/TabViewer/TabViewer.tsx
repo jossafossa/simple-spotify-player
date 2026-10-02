@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { TempoControl } from '~/components/feature/TempoControl'
 import { Controls } from '~/components/ui/Controls'
 import { useAlphaTab } from '~/hooks/useAlphaTab'
@@ -10,6 +10,7 @@ import { useTapTempo } from '~/hooks/useTapTempo'
 import { clampBpm } from '~/lib/tempo'
 import { useTabSync } from '~/hooks/useTabSync'
 import type { TabDataStatus } from '~/hooks/useTabData'
+import { readTabOptionsOpen, saveTabOptionsOpen } from '~/lib/tabOptionsStorage'
 import { readTabSettings, saveTabSettings } from '~/lib/tabSettingsStorage'
 import { isRenderableFormat } from '~/lib/tabFormat'
 import type { SongRef, TabFile } from '~/lib/types'
@@ -136,6 +137,21 @@ export const TabViewer = ({
 
   useSpaceKey(soundSource === 'tab' ? alphaTab.playPause : undefined)
 
+  // Settings seldom changed while playing sit in a strip of their own, so
+  // the bar keeps to what is used all the time. Whether the strip is open
+  // is remembered, since every new song opens a fresh viewer.
+  const optionsId = useId()
+  const [isOptionsOpen, setIsOptionsOpen] = useState(readTabOptionsOpen)
+  const toggleOptions = () => {
+    setIsOptionsOpen(!isOptionsOpen)
+    saveTabOptionsOpen(!isOptionsOpen)
+  }
+  const hasOptions =
+    (canPlayTab && alphaTab.scoreBpm !== undefined) ||
+    alphaTab.tracks.length > 1 ||
+    songTabs.length > 1 ||
+    !!onManage
+
   const notice = (() => {
     if (dataStatus === 'loading') {
       return 'Opening the file…'
@@ -218,6 +234,73 @@ export const TabViewer = ({
           </div>
         )}
       </main>
+
+      {hasOptions && isOptionsOpen && (
+        <div id={optionsId} className={styles.options} role="region" aria-label="Tab options">
+          {isRenderable && alphaTab.status === 'ready' && alphaTab.scoreBpm && (
+            <TempoControl
+              bpm={tempo.bpm ?? alphaTab.scoreBpm}
+              scoreBpm={alphaTab.scoreBpm}
+              isSet={tempo.bpm !== undefined}
+              onChange={setBpm}
+              onTap={tapTempo.tap}
+              tapCount={tapTempo.tapCount}
+              onReset={tempo.reset}
+              spotify={
+                song && loadSongBpm
+                  ? { status: spotifyTempo.status, onRequest: spotifyTempo.request }
+                  : undefined
+              }
+            />
+          )}
+
+          {alphaTab.tracks.length > 1 && (
+            <label className={styles.field}>
+              <span className={styles.label}>Track</span>
+              <select
+                className={styles.select}
+                value={alphaTab.selectedTrackIndex}
+                onChange={(event) => {
+                  alphaTab.selectTrack(Number(event.target.value))
+                  event.currentTarget.blur()
+                }}
+              >
+                {alphaTab.tracks.map((track) => (
+                  <option key={track.index} value={track.index}>
+                    {track.name || `Track ${track.index + 1}`}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {songTabs.length > 1 && (
+            <label className={styles.field}>
+              <span className={styles.label}>Tab</span>
+              <select
+                className={styles.select}
+                value={tab.id}
+                onChange={(event) => {
+                  onSelectTab(event.target.value)
+                  event.currentTarget.blur()
+                }}
+              >
+                {songTabs.map((songTab) => (
+                  <option key={songTab.id} value={songTab.id}>
+                    {songTab.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {onManage && (
+            <button type="button" className={styles.quiet} onClick={onManage}>
+              Manage tabs
+            </button>
+          )}
+        </div>
+      )}
 
       <footer className={styles.bottomBar}>
         <div className={styles.barStart}>
@@ -311,66 +394,18 @@ export const TabViewer = ({
         </div>
 
         <div className={styles.barEnd}>
-          {isRenderable && alphaTab.status === 'ready' && alphaTab.scoreBpm && (
-            <TempoControl
-              bpm={tempo.bpm ?? alphaTab.scoreBpm}
-              scoreBpm={alphaTab.scoreBpm}
-              isSet={tempo.bpm !== undefined}
-              onChange={setBpm}
-              onTap={tapTempo.tap}
-              tapCount={tapTempo.tapCount}
-              onReset={tempo.reset}
-              spotify={
-                song && loadSongBpm
-                  ? { status: spotifyTempo.status, onRequest: spotifyTempo.request }
-                  : undefined
-              }
-            />
-          )}
-
-          {alphaTab.tracks.length > 1 && (
-            <label className={styles.field}>
-              <span className={styles.label}>Track</span>
-              <select
-                className={styles.select}
-                value={alphaTab.selectedTrackIndex}
-                onChange={(event) => {
-                  alphaTab.selectTrack(Number(event.target.value))
-                  event.currentTarget.blur()
-                }}
-              >
-                {alphaTab.tracks.map((track) => (
-                  <option key={track.index} value={track.index}>
-                    {track.name || `Track ${track.index + 1}`}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          {songTabs.length > 1 && (
-            <label className={styles.field}>
-              <span className={styles.label}>Tab</span>
-              <select
-                className={styles.select}
-                value={tab.id}
-                onChange={(event) => {
-                  onSelectTab(event.target.value)
-                  event.currentTarget.blur()
-                }}
-              >
-                {songTabs.map((songTab) => (
-                  <option key={songTab.id} value={songTab.id}>
-                    {songTab.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          {onManage && (
-            <button type="button" className={styles.quiet} onClick={onManage}>
-              Manage tabs
+          {hasOptions && (
+            <button
+              type="button"
+              className={styles.ghost}
+              aria-expanded={isOptionsOpen}
+              aria-controls={optionsId}
+              onClick={(event) => {
+                event.currentTarget.blur()
+                toggleOptions()
+              }}
+            >
+              Options
             </button>
           )}
         </div>

@@ -71,7 +71,8 @@ Tabs are linked to songs and stored in the browser — no server involved.
 - **Viewing** — the tab opens as a full-page view, drawn as notation and
   tablature by [alphaTab](https://alphatab.net/). All controls sit in a bar
   along the bottom: the transport in the middle plays whichever *Sound* is
-  picked; pick another instrument track or another tab on the song.
+  picked. *Options* opens a strip above it with the tempo, the instrument
+  track and the song's other tabs; it stays open from song to song.
   *← Back to player* (or Escape) returns. A song with several tabs opens on
   the one last picked for it; the instrument track picked is remembered per
   tab.
@@ -92,11 +93,12 @@ Tabs are linked to songs and stored in the browser — no server involved.
   to reset); the offset is remembered per tab. A tab written at another
   tempo than the recording drifts apart as the song goes on; set the tempo
   (below) to fix that.
-- **Tempo** — *BPM* in the bottom bar starts at the tempo the tab is written
+- **Tempo** — *BPM*, under *Options*, starts at the tempo the tab is written
   in. Type the recording's tempo, tap **Tap** (or press T) along with the
-  beat, or ask **Spotify** for the tempo it measured. The tab then plays at
-  that tempo, and a synced cursor keeps pace with the recording instead of
-  drifting off. *Tab: 120* goes back to the written tempo; a set tempo is
+  beat — from the fourth tap it averages the whole run, leaving out a missed
+  or doubled beat, so keep tapping to close in — or ask **Spotify** for the
+  tempo it measured. The tab then plays at that tempo, and a synced cursor
+  keeps pace with the recording instead of drifting off. *Tab: 120* goes back to the written tempo; a set tempo is
   remembered per tab. Spotify only gives tempos to apps registered before
   27 November 2024 — for newer ones it answers 403, and the button goes away
   for good. Tempo changes inside a recording cannot be followed this way.

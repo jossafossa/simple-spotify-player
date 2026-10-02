@@ -66,7 +66,28 @@ const renderViewer = (props: Partial<React.ComponentProps<typeof TabViewer>> = {
 describe('TabViewer', () => {
   beforeEach(() => {
     localStorage.clear()
+    // Most tests reach into the options; the strip itself is tested on its own.
+    localStorage.setItem('spotify-player:tab-options-open', 'true')
     mockedUseAlphaTab.mockReturnValue(alphaTabResult())
+  })
+
+  it('keeps tempo, track and tab in an options strip, opened from the bar and remembered', async () => {
+    localStorage.removeItem('spotify-player:tab-options-open')
+    const user = userEvent.setup()
+    const { getByRole, queryByRole, unmount } = renderViewer({ songTabs: [buildTab('a'), buildTab('b')] })
+
+    expect(queryByRole('region', { name: 'Tab options' })).not.toBeInTheDocument()
+    await user.click(getByRole('button', { name: 'Options' }))
+
+    const options = getByRole('region', { name: 'Tab options' })
+    expect(within(options).getByRole('spinbutton', { name: 'BPM' })).toBeInTheDocument()
+    expect(within(options).getByRole('combobox', { name: 'Track' })).toBeInTheDocument()
+    expect(within(options).getByRole('combobox', { name: 'Tab' })).toBeInTheDocument()
+    expect(getByRole('button', { name: 'Options' })).toHaveAttribute('aria-expanded', 'true')
+    unmount()
+
+    const again = renderViewer()
+    expect(again.getByRole('region', { name: 'Tab options' })).toBeInTheDocument()
   })
 
   it('shows the score title for the song it was opened for', () => {

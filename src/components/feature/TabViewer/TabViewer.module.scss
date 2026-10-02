@@ -71,6 +71,18 @@
   justify-content: center;
 }
 
+/** Sits on top of the bottom bar, so it opens without moving the transport. */
+.options {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: t.$s-3 t.$s-5;
+  padding: t.$s-3 t.$s-5;
+  border-top: 1px solid t.$rule;
+  background: t.$ink-surface;
+}
+
 .back {
   @include t.button-ghost;
 
@@ -256,4 +268,9 @@
 .syncHint {
   font-size: t.$fs-fine;
   color: t.$text-faint;
+
+  // A hint, not a control: the first thing to give up its room.
+  @media (max-width: 1280px) {
+    display: none;
+  }
 }
