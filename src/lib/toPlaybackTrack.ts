@@ -11,11 +11,16 @@ export type TrackSource = {
   name?: string | null
   artists?: { name: string }[] | null
   album?: { name?: string | null; images?: { url: string }[] | null } | null
+  linked_from?: { uri?: string | null } | null
 }
 
 export const toPlaybackTrack = (source: TrackSource, durationMs: number): PlaybackTrack => ({
   id: source.id ?? '',
   uri: source.uri ?? '',
+  linkedFromUri:
+    source.linked_from?.uri && source.linked_from.uri !== source.uri
+      ? source.linked_from.uri
+      : undefined,
   name: source.name ?? 'Unknown track',
   artistNames: source.artists?.map((artist) => artist.name) ?? [],
   albumName: source.album?.name ?? '',

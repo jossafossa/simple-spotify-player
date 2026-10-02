@@ -16,6 +16,7 @@ export const TabDialogs = ({ workspace, onPlaySong }: TabDialogsProps) => {
   const { library, backup, pickerSong } = workspace
 
   if (pickerSong) {
+    // The picker's song is already resolved to its library entry, if it has one.
     const linkedTabIds = library.songs.find((song) => song.uri === pickerSong.uri)?.tabIds ?? []
 
     return (

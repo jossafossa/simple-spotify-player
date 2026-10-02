@@ -181,7 +181,7 @@ describe('TabViewer', () => {
   })
 
   describe('sync with Spotify', () => {
-    const spotifyPlayback = { trackUri: song.uri, positionMs: 12_000, isPaused: false }
+    const spotifyPlayback = { track: song, positionMs: 12_000, isPaused: false }
 
     it('is only offered when Spotify is playing', () => {
       const { queryByRole } = renderViewer()
@@ -219,10 +219,27 @@ describe('TabViewer', () => {
       expect(getByRole('button', { name: 'Offset ±0.0 s, click to reset' })).toBeInTheDocument()
     })
 
+    it('does not warn for a relinked copy or a remaster of the same song', async () => {
+      const user = userEvent.setup()
+      const { getByRole, queryByText } = renderViewer({
+        spotifyPlayback: {
+          ...spotifyPlayback,
+          track: { uri: 'spotify:track:remaster', name: 'Nemo - Remastered 2021', artistNames: ['Nightwish'] },
+        },
+      })
+
+      await user.click(getByRole('checkbox', { name: 'Sync with Spotify' }))
+
+      expect(queryByText('Spotify is playing another song')).not.toBeInTheDocument()
+    })
+
     it('warns when Spotify plays another song than the tab’s', async () => {
       const user = userEvent.setup()
       const { getByRole, getByText } = renderViewer({
-        spotifyPlayback: { ...spotifyPlayback, trackUri: 'spotify:track:other' },
+        spotifyPlayback: {
+          ...spotifyPlayback,
+          track: { uri: 'spotify:track:other', name: 'Amaranth', artistNames: ['Nightwish'] },
+        },
       })
 
       await user.click(getByRole('checkbox', { name: 'Sync with Spotify' }))

@@ -12,8 +12,8 @@ type PlaylistPanelProps = {
   currentTrackUri: string | undefined
   onSelectTrack: (trackUri: string) => void
   onReload: () => void
-  /** How many tabs each track has, by track URI; absent means none. */
-  tabCounts: Record<string, number>
+  /** How many tabs a track has. */
+  tabCountFor: (track: PlaylistTrack) => number
   onOpenTrackTabs: (track: PlaylistTrack) => void
 }
 
@@ -75,7 +75,7 @@ const PlaylistPanelComponent = ({
   currentTrackUri,
   onSelectTrack,
   onReload,
-  tabCounts,
+  tabCountFor,
   onOpenTrackTabs,
 }: PlaylistPanelProps) => {
   const currentTrackRef = useRef<HTMLLIElement>(null)
@@ -111,7 +111,7 @@ const PlaylistPanelComponent = ({
         <ol className={styles.tracks}>
           {playlist.tracks.map((track, index) => {
             const isCurrent = track.uri === currentTrackUri
-            const tabCount = tabCounts[track.uri] ?? 0
+            const tabCount = tabCountFor(track)
 
             return (
               <li

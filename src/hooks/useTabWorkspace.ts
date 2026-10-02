@@ -9,6 +9,7 @@ import {
   libraryNameFor,
   type OnlineTab,
 } from '~/lib/onlineTabSearch'
+import { findSameSong } from '~/lib/songMatch'
 import type { SongRef, TabFile, TabSong } from '~/lib/types'
 
 type OpenTab = {
@@ -19,8 +20,8 @@ type OpenTab = {
 export type UseTabWorkspaceResult = {
   library: UseTabLibraryResult
   backup: UseLibraryBackupResult
-  /** How many tabs each song has, by track URI. */
-  tabCounts: Record<string, number>
+  /** How many tabs the song has — matched across relinked copies and remasters. */
+  tabCountFor: (song: SongRef) => number
   /** The tab in the viewer, if one is open and still in the library. */
   openTab: (OpenTab & { tab: TabFile; data: UseTabDataResult; songTabs: TabFile[] }) | undefined
   pickerSong: SongRef | undefined
@@ -69,12 +70,15 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
   const [addingIds, setAddingIds] = useState<string[]>([])
   const [addedIds, setAddedIds] = useState<string[]>([])
 
-  const songByUri = new Map<string, TabSong>(library.songs.map((song) => [song.uri, song]))
   const tabById = new Map(library.tabs.map((tab) => [tab.id, tab]))
-  const tabCounts = Object.fromEntries(library.songs.map((song) => [song.uri, song.tabIds.length]))
+  const songEntryFor = (song: SongRef): TabSong | undefined => findSameSong(song, library.songs)
+  const tabCountFor = (song: SongRef): number => songEntryFor(song)?.tabIds.length ?? 0
+  // A song already in the library keeps its entry, whichever copy of it is
+  // asked about, so its tabs never split across two URIs.
+  const resolveSong = (song: SongRef): SongRef => songEntryFor(song) ?? song
 
   const openTabFile = openTabState && tabById.get(openTabState.tabId)
-  const openSongEntry = openTabState?.song && songByUri.get(openTabState.song.uri)
+  const openSongEntry = openTabState?.song && songEntryFor(openTabState.song)
   const openTab =
     openTabState && openTabFile
       ? {
@@ -86,7 +90,7 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
       : undefined
 
   const openTabInViewer = (song: SongRef | undefined, tabId: string) => {
-    setOpenTabState({ tabId, song })
+    setOpenTabState({ tabId, song: song && resolveSong(song) })
     setPickerSong(undefined)
     setIsLibraryOpen(false)
   }
@@ -95,7 +99,7 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
     setUploadError(undefined)
     setIsLibraryOpen(false)
     setAddedIds([])
-    setPickerSong(song)
+    setPickerSong(resolveSong(song))
     // Searching costs requests to three sites, so it waits for the button.
     onlineSearch.reset()
   }
@@ -120,7 +124,7 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
   }
 
   const openSongTabs = (song: SongRef) => {
-    const firstTabId = songByUri.get(song.uri)?.tabIds[0]
+    const firstTabId = songEntryFor(song)?.tabIds[0]
 
     if (firstTabId) {
       openTabInViewer(song, firstTabId)
@@ -152,7 +156,7 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
   return {
     library,
     backup,
-    tabCounts,
+    tabCountFor,
     openTab,
     pickerSong,
     isLibraryOpen,

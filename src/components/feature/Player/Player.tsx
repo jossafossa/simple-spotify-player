@@ -19,12 +19,21 @@ import { useTabWorkspace } from '~/hooks/useTabWorkspace'
 import { useTickingPosition } from '~/hooks/useTickingPosition'
 import { useUserPlaylists } from '~/hooks/useUserPlaylists'
 import { useVolumeControl } from '~/hooks/useVolumeControl'
+import type { PlaybackTrack, SongRef } from '~/lib/types'
 import styles from './Player.module.scss'
 
 type PlayerProps = {
   accessToken: string
   onLogout: () => void
 }
+
+/** The playing track as the tab library knows songs, under both its URIs. */
+const songOf = (track: PlaybackTrack): SongRef => ({
+  uri: track.uri,
+  name: track.name,
+  artistNames: track.artistNames,
+  alternateUris: track.linkedFromUri ? [track.linkedFromUri] : [],
+})
 
 const SEEK_STEP_MS = 5_000
 const VOLUME_STEP_PERCENT = 5
@@ -120,12 +129,8 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     [shownUri, playTrack],
   )
 
-  const nowPlayingSong = playbackState && {
-    uri: playbackState.track.uri,
-    name: playbackState.track.name,
-    artistNames: playbackState.track.artistNames,
-  }
-  const nowPlayingTabCount = nowPlayingSong ? (tabs.tabCounts[nowPlayingSong.uri] ?? 0) : 0
+  const nowPlayingSong = playbackState && songOf(playbackState.track)
+  const nowPlayingTabCount = nowPlayingSong ? tabs.tabCountFor(nowPlayingSong) : 0
 
   const tabButton = nowPlayingSong && (
     <button
@@ -165,7 +170,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
             currentTrackUri={playbackState?.track.uri}
             onSelectTrack={handleSelectTrack}
             onReload={reloadPlaylist}
-            tabCounts={tabs.tabCounts}
+            tabCountFor={tabs.tabCountFor}
             onOpenTrackTabs={openSongTabs}
           />
         </div>
@@ -351,7 +356,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     <TabViewerSlot
       workspace={tabs}
       spotifyPlayback={{
-        trackUri: playbackState.track.uri,
+        track: songOf(playbackState.track),
         positionMs,
         isPaused: playbackState.isPaused,
       }}

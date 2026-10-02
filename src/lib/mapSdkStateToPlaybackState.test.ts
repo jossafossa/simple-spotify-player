@@ -87,4 +87,25 @@ describe('mapSdkStateToPlaybackState', () => {
 
     expect(result.track.albumImageUrl).toBeUndefined()
   })
+
+  it('keeps the URI Spotify was asked for when it plays a relinked copy', () => {
+    const state = buildSdkState()
+    const relinked = {
+      ...state,
+      track_window: {
+        ...state.track_window,
+        current_track: {
+          ...state.track_window.current_track,
+          uri: 'spotify:track:regional',
+          linked_from: { uri: 'spotify:track:track-1', id: 'track-1' },
+        },
+      },
+    } as Spotify.PlaybackState
+
+    expect(mapSdkStateToPlaybackState(relinked).track).toMatchObject({
+      uri: 'spotify:track:regional',
+      linkedFromUri: 'spotify:track:track-1',
+    })
+    expect(mapSdkStateToPlaybackState(buildSdkState()).track.linkedFromUri).toBeUndefined()
+  })
 })

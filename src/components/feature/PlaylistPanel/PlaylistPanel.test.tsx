@@ -25,7 +25,7 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -44,7 +44,7 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -63,7 +63,7 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -82,7 +82,7 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -105,7 +105,7 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -128,7 +128,7 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -149,7 +149,7 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -168,7 +168,7 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -187,7 +187,7 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -209,7 +209,7 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         onReload={handleReload}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -235,7 +235,7 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -256,7 +256,7 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         onReload={vi.fn()}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -275,7 +275,7 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         onReload={vi.fn()}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -295,7 +295,7 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         onReload={vi.fn()}
-        tabCounts={{}}
+        tabCountFor={() => 0}
         onOpenTrackTabs={vi.fn()}
       />,
     )
@@ -327,7 +327,7 @@ describe('PlaylistPanel', () => {
           errorReason={undefined}
           contextType="playlist"
           onReload={vi.fn()}
-          tabCounts={{ 'spotify:track:a': 2 }}
+          tabCountFor={(track) => (track.uri === 'spotify:track:a' ? 2 : 0)}
           onOpenTrackTabs={onOpenTrackTabs}
         />,
       )

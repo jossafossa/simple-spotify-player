@@ -3,6 +3,7 @@ import { useAlphaTab } from '~/hooks/useAlphaTab'
 import { useFullPageView } from '~/hooks/useFullPageView'
 import { useTabSync } from '~/hooks/useTabSync'
 import type { TabDataStatus } from '~/hooks/useTabData'
+import { isSameSong } from '~/lib/songMatch'
 import { isRenderableFormat } from '~/lib/tabFormat'
 import type { SongRef, TabFile } from '~/lib/types'
 import styles from './TabViewer.module.scss'
@@ -25,7 +26,7 @@ type TabViewerProps = {
 }
 
 export type SpotifyPlayback = {
-  trackUri: string
+  track: SongRef
   positionMs: number
   isPaused: boolean
 }
@@ -76,7 +77,7 @@ export const TabViewer = ({
     seekTo: alphaTab.seekTo,
   })
   const isFollowing = sync.isEnabled && !!spotifyPlayback
-  const isOtherSong = isFollowing && !!song && song.uri !== spotifyPlayback.trackUri
+  const isOtherSong = isFollowing && !!song && !isSameSong(song, spotifyPlayback.track)
 
   const notice = (() => {
     if (dataStatus === 'loading') {

@@ -7,6 +7,7 @@ const buildPlaybackState = (overrides: Partial<PlaybackState> = {}): PlaybackSta
   track: {
     id: 'track-1',
     uri: 'spotify:track:track-1',
+    linkedFromUri: undefined,
     name: 'Song',
     artistNames: ['Artist'],
     albumName: 'Album',

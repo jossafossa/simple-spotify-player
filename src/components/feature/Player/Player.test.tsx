@@ -82,7 +82,7 @@ const buildWorkspace = (overrides: Partial<UseTabWorkspaceResult> = {}): UseTabW
     reload: vi.fn(),
   },
   backup: { status: { kind: 'idle' }, exportLibrary: vi.fn(), importLibrary: vi.fn() },
-  tabCounts: {},
+  tabCountFor: vi.fn(() => 0),
   openTab: undefined,
   pickerSong: undefined,
   isLibraryOpen: false,
@@ -111,6 +111,7 @@ const buildPlaybackState = (overrides: Partial<PlaybackState> = {}): PlaybackSta
   track: {
     id: 'track-1',
     uri: 'spotify:track:track-1',
+    linkedFromUri: undefined,
     name: 'Song Title',
     artistNames: ['Artist One', 'Artist Two'],
     albumName: 'Album Name',
@@ -791,13 +792,32 @@ describe('Player', () => {
         uri: 'spotify:track:track-1',
         name: 'Song Title',
         artistNames: ['Artist One', 'Artist Two'],
+        alternateUris: [],
       })
     })
 
-    it('offers to show the tab once the playing song has one', () => {
-      readyWith()
+    it('offers to view the tab of a relinked copy, by the URI the playlist had', () => {
+      mockedUseSpotifyPlayer.mockReturnValue({
+        status: 'ready',
+        playbackState: buildPlaybackState({
+          track: { ...buildPlaybackState().track, linkedFromUri: 'spotify:track:original' },
+        }),
+        togglePlay: vi.fn(),
+        nextTrack: vi.fn(),
+        previousTrack: vi.fn(),
+        seek: vi.fn(),
+        toggleShuffle: vi.fn(),
+        playTrack: vi.fn(),
+        volume: 50,
+        setVolume: vi.fn(),
+        claimPlayback: vi.fn(),
+        playbackErrorMessage: undefined,
+        isLicenseRefused: false,
+      })
       mockedUseTabWorkspace.mockReturnValue(
-        buildWorkspace({ tabCounts: { 'spotify:track:track-1': 1 } }),
+        buildWorkspace({
+          tabCountFor: (song) => (song.alternateUris?.includes('spotify:track:original') ? 1 : 0),
+        }),
       )
 
       render(<Player accessToken="token" onLogout={vi.fn()} />)

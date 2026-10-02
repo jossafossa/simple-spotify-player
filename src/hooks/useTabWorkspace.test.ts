@@ -54,7 +54,7 @@ describe('useTabWorkspace', () => {
   it('opens the first tab of a song that has one, and counts it', async () => {
     const { result } = await renderWorkspace()
     act(() => result.current.uploadTab(gpFile(), song))
-    await waitFor(() => expect(result.current.tabCounts).toEqual({ [song.uri]: 1 }))
+    await waitFor(() => expect(result.current.tabCountFor(song)).toBe(1))
 
     act(() => result.current.openSongTabs(song))
 
@@ -128,7 +128,7 @@ describe('useTabWorkspace', () => {
       name: 'Nemo · GProTab version 2',
       fileName: 'nightwish-nemo_2.gp4',
     })
-    expect(result.current.tabCounts).toEqual({ [song.uri]: 1 })
+    expect(result.current.tabCountFor(song)).toBe(1)
   })
 
   it('reports a found tab it could not download', async () => {
@@ -141,5 +141,24 @@ describe('useTabWorkspace', () => {
     await waitFor(() => expect(result.current.uploadError).toBe('Could not download “Nemo”.'))
     expect(result.current.online.addingIds).toEqual([])
     expect(result.current.library.tabs).toEqual([])
+  })
+
+  it('finds a song’s tabs under a relinked URI or a remaster, and keeps adding to the same entry', async () => {
+    const { result } = await renderWorkspace()
+    act(() => result.current.uploadTab(gpFile(), song))
+    await waitFor(() => expect(result.current.tabCountFor(song)).toBe(1))
+
+    const relinked = { ...song, uri: 'spotify:track:relinked', alternateUris: [song.uri] }
+    const remaster = { ...song, uri: 'spotify:track:remaster', name: 'Nemo - Remastered 2021' }
+    expect(result.current.tabCountFor(relinked)).toBe(1)
+    expect(result.current.tabCountFor(remaster)).toBe(1)
+    expect(result.current.tabCountFor({ ...song, uri: 'spotify:track:x', name: 'Amaranth' })).toBe(0)
+
+    act(() => result.current.openPicker(remaster))
+    expect(result.current.pickerSong?.uri).toBe(song.uri)
+    act(() => result.current.uploadTab(gpFile('Second.gp5'), result.current.pickerSong))
+
+    await waitFor(() => expect(result.current.tabCountFor(song)).toBe(2))
+    expect(result.current.library.songs).toHaveLength(1)
   })
 })

@@ -1,6 +1,12 @@
 export type PlaybackTrack = {
   id: string
   uri: string
+  /**
+   * The track Spotify was asked for, when it plays a relinked copy instead —
+   * a regional or remastered version with a URI of its own. Playlists list
+   * this one, so tabs linked from a playlist are filed under it.
+   */
+  linkedFromUri: string | undefined
   name: string
   artistNames: string[]
   albumName: string
@@ -95,4 +101,7 @@ export type TabSong = {
 }
 
 /** The bits of a track that linking a tab to it needs. */
-export type SongRef = Pick<TabSong, 'uri' | 'name' | 'artistNames'>
+export type SongRef = Pick<TabSong, 'uri' | 'name' | 'artistNames'> & {
+  /** Other URIs Spotify knows this same recording by. */
+  alternateUris?: string[]
+}
