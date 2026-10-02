@@ -1,5 +1,14 @@
 @use '../../theme' as t;
 
+/** The player row on top, the open tab full width beneath it. */
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: t.$s-5;
+  width: 100%;
+}
+
 .layout {
   display: flex;
   flex-wrap: wrap;
@@ -134,4 +143,45 @@
 
 .logout {
   @include t.button-quiet;
+}
+
+.tabToolbar {
+  display: flex;
+  gap: t.$s-2;
+  width: 100%;
+}
+
+.tabAction {
+  @include t.button-ghost;
+
+  border-color: t.$accent-deep;
+  color: t.$accent;
+}
+
+.tabActionQuiet {
+  @include t.button-ghost;
+}
+
+/** Spotify's transport, shrunk to fit the tab viewer's bottom bar. */
+.miniTransport {
+  flex: 0 0 168px;
+}
+
+.miniTrack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: t.$serif;
+  font-size: t.$fs-body;
+  color: t.$text;
+}
+
+.miniLabel {
+  @include t.micro-label;
+
+  color: t.$text-faint;
 }

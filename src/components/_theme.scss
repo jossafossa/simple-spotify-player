@@ -210,3 +210,44 @@ $radius-sm: 1px;
   border-radius: $radius-sm;
   background: $ink-well;
 }
+
+/// A search or text field, recessed like the selects.
+@mixin field {
+  width: 100%;
+  padding: $s-2 $s-3;
+  border: 1px solid $rule;
+  border-radius: $radius-sm;
+  background: $ink-well;
+  color: $text;
+  font-family: $sans;
+  font-size: $fs-body;
+
+  @include focus-ring(1px);
+
+  &::placeholder {
+    color: $text-faint;
+  }
+
+  &:hover {
+    border-color: $rule-strong;
+  }
+}
+
+/// Uppercase caption over a list in a dialog.
+@mixin section-heading {
+  @include micro-label;
+
+  margin: 0;
+  color: $text-faint;
+}
+
+/// A hairlined list with no bullets, rows separated by faint rules.
+@mixin ruled-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  > li + li {
+    border-top: 1px solid $rule-faint;
+  }
+}

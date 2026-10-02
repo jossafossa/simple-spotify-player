@@ -214,7 +214,7 @@ export const useRemotePlayer = (accessToken: string | undefined): UseRemotePlaye
   }, [isShuffled, runCommand])
 
   const playTrack = useCallback(
-    (contextUri: string, trackUri: string) => {
+    (contextUri: string | undefined, trackUri: string) => {
       runCommand((token) => playTrackInContext({ accessToken: token, contextUri, trackUri }))
     },
     [runCommand],

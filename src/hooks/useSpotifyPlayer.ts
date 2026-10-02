@@ -227,7 +227,7 @@ export const useSpotifyPlayer = (accessToken: string | undefined): UseSpotifyPla
   // Jumping to an arbitrary track is not something the playback SDK exposes,
   // so it goes over the Web API against this player's device.
   const playTrack = useCallback(
-    (contextUri: string, trackUri: string) => {
+    (contextUri: string | undefined, trackUri: string) => {
       const deviceId = deviceIdRef.current
 
       if (!accessToken || !deviceId) {

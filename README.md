@@ -31,13 +31,15 @@ written off for good. An explicit choice from the toggle always wins over both.
 
 `src/components/` is split by how much each component knows:
 
-- **`ui/`** — `Card`, `Controls`, `ProgressBar`. No Spotify concepts at all; a
-  media transport and a scrubber that would work against any player.
+- **`ui/`** — `Card`, `Controls`, `ProgressBar`, `VolumeControl`, `Modal`,
+  `FileButton`. No Spotify concepts at all; a media transport, a scrubber and
+  a few generic building blocks that would work in any app.
 - **`feature/`** — everything that knows what a playlist, a device, a playback
   mode or an auth status is. All of these are still presentational: they take
-  props and report events. `Player` is the one exception and the only
-  component that reaches for hooks — it wires the two playback modes, the
-  playlist and the keyboard controls together.
+  props and report events. `Player` is the exception that reaches for hooks —
+  it wires the two playback modes, the playlist, the tabs and the keyboard
+  controls together. `TabViewer` is the other one: alphaTab is an imperative
+  widget that has to own its DOM node.
 
 Shared domain types live in `src/lib/types.ts`, so no component imports from
 `src/hooks/`.
@@ -57,6 +59,42 @@ Shared domain types live in `src/lib/types.ts`, so no component imports from
   It follows changes made from other Spotify clients as well.
 - **Pins** — the star pins the open playlist. Pinned names sit above the
   picker as one-click shortcuts and are remembered per browser.
+
+## Guitar tabs
+
+Tabs are linked to songs and stored in the browser — no server involved.
+
+- **Adding** — the **TAB** button beside any track (or *Add tab* under the
+  now-playing card) opens that song's tabs. Search the library and **Add** a
+  tab you already have, or upload a new file; it is stored and linked at once.
+  A track with tabs keeps its TAB button lit, and clicking it opens the tab.
+- **Viewing** — the tab opens as a full-page view, drawn as notation and
+  tablature by [alphaTab](https://alphatab.net/). All controls sit in a bar
+  along the bottom: *Play tab* plays it through alphaTab's own synthesizer
+  (with a following cursor), separately from Spotify; pick another instrument
+  track or another tab on the song; and Spotify's own play/previous/next to
+  play along. *← Back to player* (or Escape) returns.
+- **Finding tabs** — the add-tab dialog links to Songsterr and Ultimate
+  Guitar searches for the song. Neither lets a browser-only app search them
+  directly (no CORS, and their files sit behind accounts), so download the
+  Guitar Pro file there and upload it here.
+- **Library** — *Tab library* lists every song with tabs (open a tab, play the
+  song on its own, manage its tabs) and every file (open, delete), all
+  searchable by song, artist or tab name.
+- **Formats** — Guitar Pro `.gp3`, `.gp4`, `.gp5`, `.gpx` and `.gp` are drawn
+  and played. Power Tab `.ptb` files are accepted and kept with the song, but
+  nothing in the browser can read them: the viewer offers the file back for
+  conversion — open it in [TuxGuitar](https://www.tuxguitar.app/), save as
+  `.gp5`, upload that.
+- **Import / export** — the library's *Backup* section exports everything
+  this app stores (tab files, song links, pinned playlists) as one JSON file,
+  and imports one back. Importing adds to what is there rather than replacing
+  it. Since all of it lives in this browser's IndexedDB, clearing site data
+  deletes it — export to keep a copy, or to move it to another browser.
+
+alphaTab (~1.1 MB) is only downloaded when a tab is first opened. Its Vite
+plugin copies the notation font and sound font into `public/` on every dev
+start and build, which is why those folders are git-ignored.
 
 ### Keyboard
 

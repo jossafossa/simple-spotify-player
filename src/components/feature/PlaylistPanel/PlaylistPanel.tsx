@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef } from 'react'
 import { formatTime } from '~/lib/formatTime'
-import type { Playlist, PlaylistStatus } from '~/lib/types'
+import type { Playlist, PlaylistStatus, PlaylistTrack } from '~/lib/types'
 import styles from './PlaylistPanel.module.scss'
 
 type PlaylistPanelProps = {
@@ -12,6 +12,9 @@ type PlaylistPanelProps = {
   currentTrackUri: string | undefined
   onSelectTrack: (trackUri: string) => void
   onReload: () => void
+  /** How many tabs each track has, by track URI; absent means none. */
+  tabCounts: Record<string, number>
+  onOpenTrackTabs: (track: PlaylistTrack) => void
 }
 
 /** How to name a playback context in a sentence. */
@@ -72,6 +75,8 @@ const PlaylistPanelComponent = ({
   currentTrackUri,
   onSelectTrack,
   onReload,
+  tabCounts,
+  onOpenTrackTabs,
 }: PlaylistPanelProps) => {
   const currentTrackRef = useRef<HTMLLIElement>(null)
   const isUnexpected = UNEXPECTED_STATUSES.includes(status)
@@ -106,9 +111,14 @@ const PlaylistPanelComponent = ({
         <ol className={styles.tracks}>
           {playlist.tracks.map((track, index) => {
             const isCurrent = track.uri === currentTrackUri
+            const tabCount = tabCounts[track.uri] ?? 0
 
             return (
-              <li key={`${track.uri}-${index}`} ref={isCurrent ? currentTrackRef : undefined}>
+              <li
+                key={`${track.uri}-${index}`}
+                ref={isCurrent ? currentTrackRef : undefined}
+                className={styles.row}
+              >
                 <button
                   type="button"
                   className={styles.track}
@@ -126,6 +136,21 @@ const PlaylistPanelComponent = ({
                     <span className={styles.artistNames}>{track.artistNames.join(', ')}</span>
                   </span>
                   <span className={styles.duration}>{formatTime(track.durationMs)}</span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.tabButton}
+                  data-has-tabs={tabCount > 0 || undefined}
+                  aria-label={
+                    tabCount > 0 ? `Show tab for ${track.name}` : `Add a tab to ${track.name}`
+                  }
+                  title={tabCount > 0 ? `${tabCount} tab${tabCount === 1 ? '' : 's'}` : 'Add a tab'}
+                  onClick={(event) => {
+                    event.currentTarget.blur()
+                    onOpenTrackTabs(track)
+                  }}
+                >
+                  Tab
                 </button>
               </li>
             )

@@ -21,6 +21,9 @@ const isTypingIntoField = (target: EventTarget | null): boolean =>
  * Keeps the latest handlers in a ref so the listener is registered once,
  * instead of re-registering on every render as caller callbacks change.
  */
+/** A dialog owns the keyboard while it is open, wherever focus has ended up. */
+const isModalOpen = (): boolean => document.querySelector('[aria-modal="true"]') !== null
+
 export const useKeyboardControls = (handlers: KeyboardControlHandlers): void => {
   const handlersRef = useRef(handlers)
 
@@ -30,7 +33,7 @@ export const useKeyboardControls = (handlers: KeyboardControlHandlers): void => 
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (isTypingIntoField(event.target)) {
+      if (isTypingIntoField(event.target) || isModalOpen()) {
         return
       }
 

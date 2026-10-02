@@ -3,6 +3,7 @@ import { DeviceSelect } from '~/components/feature/DeviceSelect'
 import { ModeToggle } from '~/components/feature/ModeToggle'
 import { PlaylistBrowser } from '~/components/feature/PlaylistBrowser'
 import { PlaylistPanel } from '~/components/feature/PlaylistPanel'
+import { TabDialogs, TabViewerSlot } from '~/components/feature/TabWorkspace'
 import { Card } from '~/components/ui/Card'
 import { Controls } from '~/components/ui/Controls'
 import { ProgressBar } from '~/components/ui/ProgressBar'
@@ -13,6 +14,7 @@ import { usePlaybackMode } from '~/hooks/usePlaybackMode'
 import { useRemotePlayer } from '~/hooks/useRemotePlayer'
 import { useSpotifyPlayer } from '~/hooks/useSpotifyPlayer'
 import { useSpotifyPlaylist } from '~/hooks/useSpotifyPlaylist'
+import { useTabWorkspace } from '~/hooks/useTabWorkspace'
 import { useTickingPosition } from '~/hooks/useTickingPosition'
 import { useUserPlaylists } from '~/hooks/useUserPlaylists'
 import { useVolumeControl } from '~/hooks/useVolumeControl'
@@ -59,6 +61,8 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
   const shownUri = browsedUri ?? contextUri
   const { status: userPlaylistsStatus, playlists: userPlaylists } = useUserPlaylists(accessToken)
   const { pinned, togglePin } = usePinnedPlaylists()
+  const tabs = useTabWorkspace()
+  const { openSongTabs } = tabs
   const {
     status: playlistStatus,
     playlist,
@@ -115,6 +119,44 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     [shownUri, playTrack],
   )
 
+  const nowPlayingSong = playbackState && {
+    uri: playbackState.track.uri,
+    name: playbackState.track.name,
+    artistNames: playbackState.track.artistNames,
+  }
+  const nowPlayingTabCount = nowPlayingSong ? (tabs.tabCounts[nowPlayingSong.uri] ?? 0) : 0
+
+  const tabToolbar = (
+    <div className={styles.tabToolbar}>
+      {nowPlayingSong && (
+        <button
+          type="button"
+          className={nowPlayingTabCount > 0 ? styles.tabAction : styles.tabActionQuiet}
+          onClick={(event) => {
+            event.currentTarget.blur()
+            openSongTabs(nowPlayingSong)
+          }}
+        >
+          {nowPlayingTabCount > 0 ? 'Show tab' : 'Add tab'}
+        </button>
+      )}
+      <button
+        type="button"
+        className={styles.tabActionQuiet}
+        onClick={(event) => {
+          event.currentTarget.blur()
+          tabs.openLibrary()
+        }}
+      >
+        Tab library
+      </button>
+    </div>
+  )
+
+  const tabDialogs = (
+    <TabDialogs workspace={tabs} onPlaySong={(song) => playTrack(undefined, song.uri)} />
+  )
+
   const playlistColumn = (
     <div className={styles.panelSlot}>
       <div className={styles.panelColumn}>
@@ -136,6 +178,8 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
             currentTrackUri={playbackState?.track.uri}
             onSelectTrack={handleSelectTrack}
             onReload={reloadPlaylist}
+            tabCounts={tabs.tabCounts}
+            onOpenTrackTabs={openSongTabs}
           />
         </div>
       </div>
@@ -186,111 +230,136 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
 
   if (!playbackState) {
     return (
-      <div className={styles.layout}>
-        <Card>
-          {modeToggle}
-          {isRemote ? (
-            <>
-              <DeviceSelect
-                devices={remote.devices}
-                activeDeviceName={remote.activeDeviceName}
-                onSelect={remote.selectDevice}
-              />
-              <p className={styles.message}>
-                Start something playing in Spotify and it will show up here.
-              </p>
-            </>
-          ) : (
-            <>
-              <p className={styles.message}>
-                Connected as "Spotify Player (web)". Nothing is playing here yet.
-              </p>
-              <button type="button" className={styles.claim} onClick={claimPlayback}>
-                Play here
-              </button>
-              <p className={styles.hint}>
-                Moves playback off whichever device holds it right now.
-              </p>
-            </>
-          )}
-          {logoutButton}
-        </Card>
-        {playlistColumn}
+      <div className={styles.screen}>
+        <div className={styles.layout}>
+          <Card>
+            {modeToggle}
+            {isRemote ? (
+              <>
+                <DeviceSelect
+                  devices={remote.devices}
+                  activeDeviceName={remote.activeDeviceName}
+                  onSelect={remote.selectDevice}
+                />
+                <p className={styles.message}>
+                  Start something playing in Spotify and it will show up here.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className={styles.message}>
+                  Connected as "Spotify Player (web)". Nothing is playing here yet.
+                </p>
+                <button type="button" className={styles.claim} onClick={claimPlayback}>
+                  Play here
+                </button>
+                <p className={styles.hint}>
+                  Moves playback off whichever device holds it right now.
+                </p>
+              </>
+            )}
+            {tabToolbar}
+            {logoutButton}
+          </Card>
+          {playlistColumn}
+        </div>
+        <TabViewerSlot workspace={tabs} />
+        {tabDialogs}
       </div>
     )
   }
 
   return (
-    <div className={styles.layout}>
-      <Card>
-        {modeToggle}
-        <img
-          className={styles.artwork}
-          src={playbackState.track.albumImageUrl}
-          alt={playbackState.track.albumName}
-        />
-        <div className={styles.trackInfo}>
-          <p className={styles.eyebrow}>Now playing</p>
-          <p className={styles.trackName}>{playbackState.track.name}</p>
-          <p className={styles.artistNames}>
-            {playbackState.track.artistNames.join(', ')}
-          </p>
-        </div>
-        <ProgressBar
-          positionMs={positionMs}
-          durationMs={playbackState.track.durationMs}
-          onSeek={seek}
-        />
-        <Controls
-          isPaused={playbackState.isPaused}
-          onTogglePlay={togglePlay}
-          onNext={nextTrack}
-          onPrevious={previousTrack}
-          isShuffled={playbackState.isShuffled}
-          onToggleShuffle={toggleShuffle}
-        />
-        {volume !== undefined && (
-          <VolumeControl
-            volumePercent={volume}
-            isMuted={isMuted}
-            onChange={setVolume}
-            onToggleMute={toggleMute}
+    <div className={styles.screen}>
+      <div className={styles.layout}>
+        <Card>
+          {modeToggle}
+          <img
+            className={styles.artwork}
+            src={playbackState.track.albumImageUrl}
+            alt={playbackState.track.albumName}
           />
-        )}
-        {isRemote && (
-          <DeviceSelect
-            devices={remote.devices}
-            activeDeviceName={remote.activeDeviceName}
-            onSelect={remote.selectDevice}
-          />
-        )}
-        {!isRemote && local.status === 'offline' && (
-          <p className={styles.message}>This device went offline — reconnecting…</p>
-        )}
-        {!isRemote && local.playbackErrorMessage && (
-          <p className={styles.playbackError}>
-            Spotify could not play this track: {local.playbackErrorMessage}
-          </p>
-        )}
-        {!isRemote && local.isLicenseRefused && (
-          <div className={styles.playbackError}>
-            <p className={styles.stallText}>
-              Spotify refused this browser a DRM licence, so playback will stop
-              a few seconds in. Firefox forks such as Zen ship Widevine
-              unlicensed. Play in Firefox itself, Chrome or Edge, or control
-              another device from here.
-            </p>
-            <button type="button" className={styles.switchMode} onClick={() => setMode('remote')}>
-              Switch to remote control
-            </button>
+          <div className={styles.trackInfo}>
+            <p className={styles.eyebrow}>Now playing</p>
+            <p className={styles.trackName}>{playbackState.track.name}</p>
+            <p className={styles.artistNames}>{playbackState.track.artistNames.join(', ')}</p>
           </div>
-        )}
-        <p className={styles.legend}>
-          Space play/pause · ← → seek · ↑ ↓ volume · M mute · S shuffle · N next · P previous
-        </p>
-        {logoutButton}
-      </Card>
-      {playlistColumn}
+          <ProgressBar
+            positionMs={positionMs}
+            durationMs={playbackState.track.durationMs}
+            onSeek={seek}
+          />
+          <Controls
+            isPaused={playbackState.isPaused}
+            onTogglePlay={togglePlay}
+            onNext={nextTrack}
+            onPrevious={previousTrack}
+            isShuffled={playbackState.isShuffled}
+            onToggleShuffle={toggleShuffle}
+          />
+          {volume !== undefined && (
+            <VolumeControl
+              volumePercent={volume}
+              isMuted={isMuted}
+              onChange={setVolume}
+              onToggleMute={toggleMute}
+            />
+          )}
+          {isRemote && (
+            <DeviceSelect
+              devices={remote.devices}
+              activeDeviceName={remote.activeDeviceName}
+              onSelect={remote.selectDevice}
+            />
+          )}
+          {!isRemote && local.status === 'offline' && (
+            <p className={styles.message}>This device went offline — reconnecting…</p>
+          )}
+          {!isRemote && local.playbackErrorMessage && (
+            <p className={styles.playbackError}>
+              Spotify could not play this track: {local.playbackErrorMessage}
+            </p>
+          )}
+          {!isRemote && local.isLicenseRefused && (
+            <div className={styles.playbackError}>
+              <p className={styles.stallText}>
+                Spotify refused this browser a DRM licence, so playback will stop a few seconds in.
+                Firefox forks such as Zen ship Widevine unlicensed. Play in Firefox itself, Chrome
+                or Edge, or control another device from here.
+              </p>
+              <button type="button" className={styles.switchMode} onClick={() => setMode('remote')}>
+                Switch to remote control
+              </button>
+            </div>
+          )}
+          <p className={styles.legend}>
+            Space play/pause · ← → seek · ↑ ↓ volume · M mute · S shuffle · N next · P previous
+          </p>
+          {tabToolbar}
+          {logoutButton}
+        </Card>
+        {playlistColumn}
+      </div>
+      <TabViewerSlot
+        workspace={tabs}
+        playbackControls={
+          <>
+            <span className={styles.miniTrack}>
+              <span className={styles.miniLabel}>Spotify</span>
+              {playbackState.track.name}
+            </span>
+            <div className={styles.miniTransport}>
+              <Controls
+                isPaused={playbackState.isPaused}
+                onTogglePlay={togglePlay}
+                onNext={nextTrack}
+                onPrevious={previousTrack}
+              />
+            </div>
+          </>
+        }
+      />
+      {tabDialogs}
     </div>
   )
 }

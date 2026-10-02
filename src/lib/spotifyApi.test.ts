@@ -261,6 +261,17 @@ describe('fetchContextPlaylist', () => {
 })
 
 describe('playTrackInContext', () => {
+  it('plays a track on its own when there is no context', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(emptyResponse()))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await playTrackInContext({ accessToken: 'token', contextUri: undefined, trackUri: 'spotify:track:7' })
+
+    const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit]
+    expect(url).toBe('https://api.spotify.com/v1/me/player/play')
+    expect(JSON.parse(init.body as string)).toEqual({ uris: ['spotify:track:7'] })
+  })
+
   it('starts the chosen track while keeping the context queued', async () => {
     const fetchMock = vi.fn(() => Promise.resolve(emptyResponse()))
     vi.stubGlobal('fetch', fetchMock)

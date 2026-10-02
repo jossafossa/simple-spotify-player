@@ -65,7 +65,8 @@ export type PlayerControls = {
   previousTrack: () => void
   seek: (positionMs: number) => void
   toggleShuffle: () => void
-  playTrack: (contextUri: string, trackUri: string) => void
+  /** Without a context the track plays on its own, with nothing queued after it. */
+  playTrack: (contextUri: string | undefined, trackUri: string) => void
   /** 0–100, or undefined when the device does not report or support volume. */
   volume: number | undefined
   setVolume: (volumePercent: number) => void

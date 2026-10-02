@@ -106,6 +106,8 @@
 .track {
   @include t.button-base;
 
+  flex: 1;
+  min-width: 0;
   width: 100%;
   display: flex;
   align-items: center;
@@ -196,4 +198,48 @@
   flex: 0 0 auto;
   font-size: t.$fs-fine;
   color: t.$text-faint;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+
+  &:hover .tabButton {
+    opacity: 1;
+  }
+}
+
+/**
+ * Faint until the row is hovered, so a long list does not read as a column of
+ * buttons; a track that has tabs keeps it lit in ochre.
+ */
+.tabButton {
+  @include t.button-base;
+  @include t.micro-label;
+
+  flex: 0 0 auto;
+  margin-left: t.$s-1;
+  padding: 2px t.$s-1;
+  border: 1px solid t.$rule;
+  background: transparent;
+  color: t.$text-faint;
+  font-size: 10px;
+  opacity: 0.45;
+  transition:
+    opacity 120ms linear,
+    color 120ms linear,
+    border-color 120ms linear;
+
+  &:hover,
+  &:focus-visible {
+    border-color: t.$rule-strong;
+    color: t.$text;
+    opacity: 1;
+  }
+
+  &[data-has-tabs] {
+    border-color: t.$accent-deep;
+    color: t.$accent;
+    opacity: 1;
+  }
 }

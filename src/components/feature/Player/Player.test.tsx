@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useKeyboardControls } from '~/hooks/useKeyboardControls'
@@ -6,6 +6,7 @@ import { useSpotifyPlayer } from '~/hooks/useSpotifyPlayer'
 import { usePlaybackMode } from '~/hooks/usePlaybackMode'
 import { useRemotePlayer } from '~/hooks/useRemotePlayer'
 import { useSpotifyPlaylist } from '~/hooks/useSpotifyPlaylist'
+import { useTabWorkspace, type UseTabWorkspaceResult } from '~/hooks/useTabWorkspace'
 import { useUserPlaylists } from '~/hooks/useUserPlaylists'
 import type { PlaybackState } from '~/lib/types'
 import { Player } from './Player'
@@ -27,6 +28,9 @@ vi.mock('~/hooks/useUserPlaylists', () => ({
 }))
 vi.mock('~/hooks/usePinnedPlaylists', () => ({
   usePinnedPlaylists: vi.fn(() => ({ pinned: [], togglePin: vi.fn() })),
+}))
+vi.mock('~/hooks/useTabWorkspace', () => ({
+  useTabWorkspace: vi.fn(),
 }))
 vi.mock('~/hooks/useSpotifyPlaylist', () => ({
   useSpotifyPlaylist: vi.fn(() => ({
@@ -64,6 +68,36 @@ const mockedUseSpotifyPlayer = vi.mocked(useSpotifyPlayer)
 const mockedUseKeyboardControls = vi.mocked(useKeyboardControls)
 const mockedUseSpotifyPlaylist = vi.mocked(useSpotifyPlaylist)
 const mockedUseUserPlaylists = vi.mocked(useUserPlaylists)
+const mockedUseTabWorkspace = vi.mocked(useTabWorkspace)
+
+const buildWorkspace = (overrides: Partial<UseTabWorkspaceResult> = {}): UseTabWorkspaceResult => ({
+  library: {
+    status: 'ready',
+    tabs: [],
+    songs: [],
+    addTabFile: vi.fn(),
+    linkTab: vi.fn(),
+    unlinkTab: vi.fn(),
+    removeTab: vi.fn(),
+    reload: vi.fn(),
+  },
+  backup: { status: { kind: 'idle' }, exportLibrary: vi.fn(), importLibrary: vi.fn() },
+  tabCounts: {},
+  openTab: undefined,
+  pickerSong: undefined,
+  isLibraryOpen: false,
+  uploadError: undefined,
+  openSongTabs: vi.fn(),
+  openTabInViewer: vi.fn(),
+  closeViewer: vi.fn(),
+  openPicker: vi.fn(),
+  closePicker: vi.fn(),
+  openLibrary: vi.fn(),
+  closeLibrary: vi.fn(),
+  uploadTab: vi.fn(),
+  deleteTab: vi.fn(),
+  ...overrides,
+})
 
 const buildPlaybackState = (overrides: Partial<PlaybackState> = {}): PlaybackState => ({
   track: {
@@ -88,6 +122,7 @@ describe('Player', () => {
     reportLocalPlaybackFailure.mockClear()
     mockedUsePlaybackMode.mockReturnValue({ mode: 'local', setMode, reportLocalPlaybackFailure })
     mockedUseRemotePlayer.mockReturnValue(remoteResult)
+    mockedUseTabWorkspace.mockReturnValue(buildWorkspace())
   })
 
   afterEach(() => {
@@ -714,6 +749,119 @@ describe('Player', () => {
 
       expect(screen.getByRole('combobox', { name: 'Browse' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Play here' })).toBeInTheDocument()
+    })
+  })
+
+  describe('tabs', () => {
+    const readyWith = (playTrack = vi.fn()) =>
+      mockedUseSpotifyPlayer.mockReturnValue({
+        status: 'ready',
+        playbackState: buildPlaybackState(),
+        togglePlay: vi.fn(),
+        nextTrack: vi.fn(),
+        previousTrack: vi.fn(),
+        seek: vi.fn(),
+        toggleShuffle: vi.fn(),
+        playTrack,
+        volume: 50,
+        setVolume: vi.fn(),
+        claimPlayback: vi.fn(),
+        playbackErrorMessage: undefined,
+        isLicenseRefused: false,
+      })
+
+    it('adds a tab to the song that is playing', async () => {
+      readyWith()
+      const workspace = buildWorkspace()
+      mockedUseTabWorkspace.mockReturnValue(workspace)
+      const user = userEvent.setup()
+
+      render(<Player accessToken="token" onLogout={vi.fn()} />)
+      await user.click(screen.getByRole('button', { name: 'Add tab' }))
+
+      expect(workspace.openSongTabs).toHaveBeenCalledWith({
+        uri: 'spotify:track:track-1',
+        name: 'Song Title',
+        artistNames: ['Artist One', 'Artist Two'],
+      })
+    })
+
+    it('offers to show the tab once the playing song has one', () => {
+      readyWith()
+      mockedUseTabWorkspace.mockReturnValue(
+        buildWorkspace({ tabCounts: { 'spotify:track:track-1': 1 } }),
+      )
+
+      render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+      expect(screen.getByRole('button', { name: 'Show tab' })).toBeInTheDocument()
+    })
+
+    it('gives the open tab Spotify’s transport to play along with', async () => {
+      const togglePlay = vi.fn()
+      mockedUseSpotifyPlayer.mockReturnValue({
+        status: 'ready',
+        playbackState: buildPlaybackState(),
+        togglePlay,
+        nextTrack: vi.fn(),
+        previousTrack: vi.fn(),
+        seek: vi.fn(),
+        toggleShuffle: vi.fn(),
+        playTrack: vi.fn(),
+        volume: 50,
+        setVolume: vi.fn(),
+        claimPlayback: vi.fn(),
+        playbackErrorMessage: undefined,
+        isLicenseRefused: false,
+      })
+      const tab = {
+        id: 'tab-1',
+        name: 'Solo',
+        fileName: 'Solo.ptb',
+        format: 'power-tab' as const,
+        sizeBytes: 1,
+        addedAt: 1,
+      }
+      mockedUseTabWorkspace.mockReturnValue(
+        buildWorkspace({
+          openTab: {
+            tabId: tab.id,
+            song: undefined,
+            tab,
+            data: { status: 'ready', data: new ArrayBuffer(1) },
+            songTabs: [],
+          },
+        }),
+      )
+      const user = userEvent.setup()
+
+      render(<Player accessToken="token" onLogout={vi.fn()} />)
+      const spotify = screen.getByRole('group', { name: 'Spotify playback' })
+      await user.click(within(spotify).getByRole('button', { name: 'Pause' }))
+
+      expect(spotify).toHaveTextContent('Song Title')
+      expect(togglePlay).toHaveBeenCalledOnce()
+    })
+
+    it('opens the library, and plays a song from it on its own', async () => {
+      const playTrack = vi.fn()
+      readyWith(playTrack)
+      const workspace = buildWorkspace({
+        isLibraryOpen: true,
+        library: {
+          ...buildWorkspace().library,
+          songs: [{ uri: 'spotify:track:nemo', name: 'Nemo', artistNames: [], tabIds: [] }],
+        },
+      })
+      mockedUseTabWorkspace.mockReturnValue(workspace)
+      const user = userEvent.setup()
+
+      render(<Player accessToken="token" onLogout={vi.fn()} />)
+      await user.click(screen.getByRole('button', { name: 'Tab library' }))
+      await user.click(screen.getByRole('button', { name: 'Play Nemo' }))
+
+      expect(workspace.openLibrary).toHaveBeenCalledOnce()
+      expect(playTrack).toHaveBeenCalledWith(undefined, 'spotify:track:nemo')
     })
   })
 })

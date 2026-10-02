@@ -25,6 +25,8 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
@@ -42,6 +44,8 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
@@ -59,6 +63,8 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
@@ -76,6 +82,8 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
@@ -97,6 +105,8 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
@@ -118,6 +128,8 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
@@ -137,6 +149,8 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
@@ -154,6 +168,8 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
@@ -171,6 +187,8 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
@@ -191,6 +209,8 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         onReload={handleReload}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
@@ -215,6 +235,8 @@ describe('PlaylistPanel', () => {
         errorReason={undefined}
         contextType={'playlist'}
         onReload={vi.fn()}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
@@ -234,6 +256,8 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         onReload={vi.fn()}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
@@ -251,6 +275,8 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         onReload={vi.fn()}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
@@ -269,10 +295,49 @@ describe('PlaylistPanel', () => {
         currentTrackUri={undefined}
         onSelectTrack={vi.fn()}
         onReload={vi.fn()}
+        tabCounts={{}}
+        onOpenTrackTabs={vi.fn()}
       />,
     )
 
     expect(screen.getByText(/HTTP 500/)).toBeInTheDocument()
     expect(screen.getByText(/Server error/)).toBeInTheDocument()
+  })
+
+  describe('tab buttons', () => {
+    const playlist = {
+      name: 'Mix',
+      tracks: [
+        { uri: 'spotify:track:a', name: 'With tab', artistNames: ['A'], durationMs: 1_000 },
+        { uri: 'spotify:track:b', name: 'Without tab', artistNames: ['B'], durationMs: 1_000 },
+      ],
+    }
+
+    it('offers to show or add a tab per track, without starting the track', async () => {
+      const user = userEvent.setup()
+      const onSelectTrack = vi.fn()
+      const onOpenTrackTabs = vi.fn()
+      render(
+        <PlaylistPanel
+          status="ready"
+          playlist={playlist}
+          currentTrackUri={undefined}
+          onSelectTrack={onSelectTrack}
+          errorStatus={undefined}
+          errorReason={undefined}
+          contextType="playlist"
+          onReload={vi.fn()}
+          tabCounts={{ 'spotify:track:a': 2 }}
+          onOpenTrackTabs={onOpenTrackTabs}
+        />,
+      )
+
+      const withTab = screen.getByRole('button', { name: 'Show tab for With tab' })
+      expect(withTab).toHaveAttribute('title', '2 tabs')
+      await user.click(screen.getByRole('button', { name: 'Add a tab to Without tab' }))
+
+      expect(onOpenTrackTabs).toHaveBeenCalledWith(playlist.tracks[1])
+      expect(onSelectTrack).not.toHaveBeenCalled()
+    })
   })
 })

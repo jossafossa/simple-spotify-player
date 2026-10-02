@@ -1,0 +1,114 @@
+@use '../../theme' as t;
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: t.$s-2;
+}
+
+.heading {
+  @include t.section-heading;
+}
+
+.search {
+  @include t.field;
+}
+
+.list {
+  @include t.ruled-list;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: t.$s-3;
+  padding: t.$s-2 0;
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+button.name {
+  @include t.button-base;
+
+  &:hover .tabName {
+    color: t.$accent;
+  }
+}
+
+.tabName {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: t.$serif;
+  font-size: t.$fs-body;
+  color: t.$text;
+}
+
+.meta {
+  @include t.numerals;
+
+  font-size: t.$fs-fine;
+  color: t.$text-faint;
+}
+
+.action {
+  @include t.button-quiet;
+
+  align-self: center;
+}
+
+.add {
+  @include t.button-ghost;
+}
+
+.empty,
+.hint {
+  margin: 0;
+  font-size: t.$fs-small;
+  line-height: t.$lh-body;
+  color: t.$text-muted;
+}
+
+.hint {
+  font-size: t.$fs-fine;
+  color: t.$text-faint;
+}
+
+.upload {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: t.$s-2;
+  padding-top: t.$s-3;
+  border-top: 1px solid t.$rule;
+}
+
+.error {
+  margin: 0;
+  padding-left: t.$s-3;
+  border-left: 2px solid t.$danger-rule;
+  font-size: t.$fs-small;
+  color: t.$danger;
+}
+
+.links {
+  display: flex;
+  gap: t.$s-2;
+  margin: 0;
+}
+
+.link {
+  @include t.button-ghost;
+
+  text-decoration: none;
+}

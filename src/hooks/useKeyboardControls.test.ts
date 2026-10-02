@@ -83,6 +83,19 @@ describe('useKeyboardControls', () => {
     document.body.innerHTML = ''
   })
 
+  it('stands down while a dialog is open, wherever focus is', async () => {
+    const user = userEvent.setup()
+    document.body.innerHTML = '<div role="dialog" aria-modal="true"></div>'
+    renderHook(() => useKeyboardControls(handlers))
+
+    await user.keyboard(' m')
+
+    expect(handlers.onTogglePlay).not.toHaveBeenCalled()
+    expect(handlers.onToggleMute).not.toHaveBeenCalled()
+
+    document.body.innerHTML = ''
+  })
+
   it('ignores keystrokes while typing into a text field', async () => {
     const user = userEvent.setup()
     document.body.innerHTML = '<input type="text" />'

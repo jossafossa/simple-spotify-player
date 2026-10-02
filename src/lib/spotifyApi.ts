@@ -232,7 +232,7 @@ const deviceQuery = (deviceId: string | undefined): string =>
 type PlayTrackInContextParams = {
   accessToken: string
   deviceId?: string
-  contextUri: string
+  contextUri: string | undefined
   trackUri: string
 }
 
@@ -249,7 +249,9 @@ export const playTrackInContext = async ({
   await request(accessToken, `/me/player/play${deviceQuery(deviceId)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ context_uri: contextUri, offset: { uri: trackUri } }),
+    body: JSON.stringify(
+      contextUri ? { context_uri: contextUri, offset: { uri: trackUri } } : { uris: [trackUri] },
+    ),
   })
 }
 

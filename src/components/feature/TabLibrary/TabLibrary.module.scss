@@ -1,0 +1,167 @@
+@use '../../theme' as t;
+
+.search {
+  @include t.field;
+}
+
+.section,
+.backup {
+  display: flex;
+  flex-direction: column;
+  gap: t.$s-2;
+}
+
+.backup {
+  padding-top: t.$s-3;
+  border-top: 1px solid t.$rule;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.heading {
+  @include t.section-heading;
+}
+
+.list {
+  @include t.ruled-list;
+}
+
+.song {
+  display: flex;
+  flex-direction: column;
+  gap: t.$s-2;
+  padding: t.$s-2 0;
+}
+
+.songHeader,
+.file {
+  display: flex;
+  align-items: center;
+  gap: t.$s-3;
+}
+
+.file {
+  padding: t.$s-2 0;
+}
+
+.play {
+  @include t.button-ghost;
+
+  padding: t.$s-1 t.$s-2;
+  letter-spacing: 0;
+}
+
+.songText,
+.fileName {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.fileName {
+  @include t.button-base;
+
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+
+  &:hover .songName {
+    color: t.$accent;
+  }
+}
+
+.songName,
+.artists,
+.meta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.songName {
+  font-family: t.$serif;
+  font-size: t.$fs-body;
+  color: t.$text;
+}
+
+.artists {
+  font-size: t.$fs-fine;
+  color: t.$text-muted;
+}
+
+.meta {
+  @include t.numerals;
+
+  font-size: t.$fs-fine;
+  color: t.$text-faint;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: t.$s-1;
+  padding-left: 38px;
+}
+
+.chip {
+  @include t.button-ghost;
+
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: t.$s-1 t.$s-2;
+  border-color: t.$accent-deep;
+  color: t.$accent;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+}
+
+.quiet {
+  @include t.button-quiet;
+
+  align-self: center;
+}
+
+.ghost {
+  @include t.button-ghost;
+}
+
+.backupActions {
+  display: flex;
+  gap: t.$s-2;
+}
+
+.empty,
+.hint,
+.success {
+  margin: 0;
+  font-size: t.$fs-small;
+  line-height: t.$lh-body;
+  color: t.$text-muted;
+}
+
+.hint {
+  font-size: t.$fs-fine;
+  color: t.$text-faint;
+}
+
+.success {
+  color: t.$accent;
+}
+
+.error {
+  margin: 0;
+  padding-left: t.$s-3;
+  border-left: 2px solid t.$danger-rule;
+  font-size: t.$fs-small;
+  color: t.$danger;
+}

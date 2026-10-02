@@ -1,0 +1,75 @@
+@use '../../theme' as t;
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 8vh t.$s-4 t.$s-4;
+  background: rgba(5, 7, 10, 0.72);
+}
+
+/** The card's surface and masthead rule, sized for a list. */
+.dialog {
+  width: min(560px, 100%);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid t.$rule;
+  border-top: 2px solid t.$accent;
+  border-radius: t.$radius;
+  background: t.$ink-surface;
+  font-family: t.$sans;
+  text-align: left;
+  outline: none;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: t.$s-3;
+  padding: t.$s-5 t.$s-5 t.$s-3;
+  border-bottom: 1px solid t.$rule;
+}
+
+.heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  @include t.display(t.$fs-title);
+
+  margin: 0;
+  color: t.$text;
+}
+
+.subtitle {
+  margin: t.$s-1 0 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: t.$fs-small;
+  color: t.$text-muted;
+}
+
+.close {
+  @include t.button-ghost;
+
+  padding: 0 t.$s-2;
+  font-size: t.$fs-title;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: t.$s-4;
+  padding: t.$s-4 t.$s-5 t.$s-5;
+  overflow-y: auto;
+}

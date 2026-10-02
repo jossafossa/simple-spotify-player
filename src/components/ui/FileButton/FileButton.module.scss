@@ -1,0 +1,9 @@
+@use '../../theme' as t;
+
+.button {
+  @include t.button-ghost;
+}
+
+.input {
+  display: none;
+}
