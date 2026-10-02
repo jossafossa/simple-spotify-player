@@ -73,7 +73,9 @@ Tabs are linked to songs and stored in the browser — no server involved.
   along the bottom: *Play tab* plays it through alphaTab's own synthesizer
   (with a following cursor), separately from Spotify; pick another instrument
   track or another tab on the song; and Spotify's own play/previous/next to
-  play along. *← Back to player* (or Escape) returns.
+  play along. *← Back to player* (or Escape) returns. A song with several
+  tabs opens on the one last picked for it; the instrument track picked is
+  remembered per tab.
 - **Preview** — every free online result, and every library tab not yet on
   the song, has *Preview*: it opens full page without storing or linking
   anything. *Add to this song* in its top bar adds it (an online file is

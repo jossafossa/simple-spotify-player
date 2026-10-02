@@ -34,6 +34,7 @@ const renderWorkspace = async () => {
 
 describe('useTabWorkspace', () => {
   beforeEach(async () => {
+    localStorage.clear()
     await resetTabDatabase()
     vi.spyOn(console, 'error').mockImplementation(() => {})
   })
@@ -49,6 +50,37 @@ describe('useTabWorkspace', () => {
 
     expect(result.current.pickerSong).toEqual(song)
     expect(result.current.openTab).toBeUndefined()
+  })
+
+  it('opens a song on the tab last picked for it, also after a reload', async () => {
+    const first = await renderWorkspace()
+    act(() => first.result.current.uploadTab(gpFile('Nemo.gp5'), song))
+    await waitFor(() => expect(first.result.current.tabCountFor(song)).toBe(1))
+    act(() => first.result.current.uploadTab(gpFile('Nemo solo.gp5'), song))
+    await waitFor(() => expect(first.result.current.tabCountFor(song)).toBe(2))
+    const solo = first.result.current.library.tabs.find((tab) => tab.name === 'Nemo solo')!
+
+    act(() => first.result.current.openTabInViewer(song, solo.id))
+    first.unmount()
+
+    const second = await renderWorkspace()
+    act(() => second.result.current.openSongTabs(song))
+    expect(second.result.current.openTab?.tab.name).toBe('Nemo solo')
+
+    act(() => second.result.current.closeViewer())
+    act(() => second.result.current.showTabFor(song))
+    expect(second.result.current.openTab?.tab.name).toBe('Nemo solo')
+  })
+
+  it('falls back to the first tab once the last picked one is off the song', async () => {
+    const { result } = await renderWorkspace()
+    act(() => result.current.uploadTab(gpFile(), song))
+    await waitFor(() => expect(result.current.tabCountFor(song)).toBe(1))
+    localStorage.setItem('spotify-player:song-last-tab', JSON.stringify({ [song.uri]: 'gone' }))
+
+    act(() => result.current.openSongTabs(song))
+
+    expect(result.current.openTab?.tab.name).toBe('Nemo')
   })
 
   it('opens the first tab of a song that has one, and counts it', async () => {

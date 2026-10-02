@@ -12,6 +12,7 @@ import {
   type OnlineTab,
 } from '~/lib/onlineTabSearch'
 import { findSameSong } from '~/lib/songMatch'
+import { readLastTabId, saveLastTabId } from '~/lib/songTabStorage'
 import type { SongRef, TabFile, TabSong } from '~/lib/types'
 
 type OpenTab = {
@@ -89,6 +90,16 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
   // A song already in the library keeps its entry, whichever copy of it is
   // asked about, so its tabs never split across two URIs.
   const resolveSong = (song: SongRef): SongRef => songEntryFor(song) ?? song
+  // The tab last opened for the song, as long as it is still on it.
+  const preferredTabIdFor = (song: SongRef): string | undefined => {
+    const entry = songEntryFor(song)
+    if (!entry) {
+      return undefined
+    }
+
+    const lastTabId = readLastTabId(entry.uri)
+    return lastTabId && entry.tabIds.includes(lastTabId) ? lastTabId : entry.tabIds[0]
+  }
 
   const openTabFile = openTabState && tabById.get(openTabState.tabId)
   const openSongEntry = openTabState?.song && songEntryFor(openTabState.song)
@@ -103,7 +114,11 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
       : undefined
 
   const openTabInViewer = (song: SongRef | undefined, tabId: string) => {
-    setOpenTabState({ tabId, song: song && resolveSong(song) })
+    const resolved = song && resolveSong(song)
+    if (resolved) {
+      saveLastTabId(resolved.uri, tabId)
+    }
+    setOpenTabState({ tabId, song: resolved })
     setPickerSong(undefined)
     setIsLibraryOpen(false)
   }
@@ -137,10 +152,10 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
   }
 
   const openSongTabs = (song: SongRef) => {
-    const firstTabId = songEntryFor(song)?.tabIds[0]
+    const tabId = preferredTabIdFor(song)
 
-    if (firstTabId) {
-      openTabInViewer(song, firstTabId)
+    if (tabId) {
+      openTabInViewer(song, tabId)
       return
     }
 
@@ -201,9 +216,9 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
     uploadTab,
     deleteTab,
     showTabFor: (song) => {
-      const firstTabId = songEntryFor(song)?.tabIds[0]
-      if (firstTabId) {
-        openTabInViewer(song, firstTabId)
+      const tabId = preferredTabIdFor(song)
+      if (tabId) {
+        openTabInViewer(song, tabId)
       } else {
         setOpenTabState(undefined)
       }
