@@ -389,6 +389,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
         togglePlay,
         next: nextTrack,
         previous: restartOrPrevious,
+        seek,
       }}
     />,
   )

@@ -88,7 +88,7 @@ Tabs are linked to songs and stored in the browser — no server involved.
   synthesizer, with a following cursor; previous goes back to its start, and
   Space plays and pauses it. *Spotify* plays the song in Spotify instead, its
   play/previous/next in the transport, and the cursor follows it, scrolling
-  along and jumping when you seek. A transcription seldom lines up exactly with the
+  along and jumping when you seek. Clicking a note plays the song from there. A transcription seldom lines up exactly with the
   recording, so − / + nudge the tab half a second at a time (click the value
   to reset); the offset is remembered per tab. A tab written at another
   tempo than the recording drifts apart as the song goes on; set the tempo

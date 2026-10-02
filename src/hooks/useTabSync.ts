@@ -9,11 +9,6 @@ export type UseTabSyncResult = {
   offsetMs: number
   nudge: (deltaMs: number) => void
   resetOffset: () => void
-  /**
-   * Lines the tab up so the given moment in it is where Spotify is now — for
-   * a click on the note that is sounding.
-   */
-  alignTo: (tabTimeMs: number) => void
 }
 
 type TabSyncInput = {
@@ -63,10 +58,5 @@ export const useTabSync = ({ tabId, positionMs, canSeek, seekTo }: TabSyncInput)
     offsetMs,
     nudge: (deltaMs) => changeOffset(offsetMs + deltaMs),
     resetOffset: () => changeOffset(0),
-    alignTo: (tabTimeMs) => {
-      if (isEnabled && positionMs !== undefined) {
-        changeOffset(Math.round(tabTimeMs - positionMs))
-      }
-    },
   }
 }

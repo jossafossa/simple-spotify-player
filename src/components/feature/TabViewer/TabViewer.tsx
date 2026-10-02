@@ -42,6 +42,7 @@ export type SpotifyPlayback = {
   togglePlay: () => void
   next: () => void
   previous: () => void
+  seek: (positionMs: number) => void
 }
 
 /** What the transport plays: Spotify, with the cursor following, or the tab itself. */
@@ -85,12 +86,12 @@ export const TabViewer = ({
   const isRenderable = isRenderableFormat(tab.format)
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null)
-  // The sync below needs alphaTab, and alphaTab reports clicks to the sync,
-  // so the click is relayed through a ref set once the sync exists.
-  const alignToRef = useRef<(tabTimeMs: number) => void>(() => {})
+  // The sync below needs alphaTab, and alphaTab reports clicks that need the
+  // sync's offset, so the click is relayed through a ref set once it exists.
+  const beatClickRef = useRef<(tabTimeMs: number) => void>(() => {})
   const tempo = useTabTempo(tab.id)
   const alphaTab = useAlphaTab({ container, scrollElement }, isRenderable ? data : undefined, {
-    onBeatClick: (tabTimeMs) => alignToRef.current(tabTimeMs),
+    onBeatClick: (tabTimeMs) => beatClickRef.current(tabTimeMs),
     initialTrackIndex: readTabSettings(tab.id).trackIndex,
     onTrackSelect: (trackIndex) => saveTabSettings(tab.id, { trackIndex }),
     bpm: tempo.bpm,
@@ -110,12 +111,18 @@ export const TabViewer = ({
     canSeek: isRenderable && alphaTab.status === 'ready' && alphaTab.isPlayerReady,
     seekTo: alphaTab.seekTo,
   })
-  useEffect(() => {
-    alignToRef.current = sync.alignTo
-  })
   const canPlayTab = isRenderable && alphaTab.status === 'ready'
   const canFollowSpotify = canPlayTab && !!spotifyPlayback
   const isFollowing = canFollowSpotify && sync.isEnabled
+  // A click on a note while following plays Spotify from that moment; the
+  // tab's own player moves there by itself.
+  useEffect(() => {
+    beatClickRef.current = (tabTimeMs) => {
+      if (isFollowing && spotifyPlayback) {
+        spotifyPlayback.seek(Math.max(Math.round(tabTimeMs - sync.offsetMs), 0))
+      }
+    }
+  })
   // A tab that cannot play leaves the transport to Spotify.
   const soundSource: SoundSource | undefined = isFollowing
     ? 'spotify'
@@ -358,7 +365,7 @@ export const TabViewer = ({
                   </button>
                 </span>
               )}
-              {isFollowing && <span className={styles.syncHint}>Click the note you hear to line up</span>}
+              {isFollowing && <span className={styles.syncHint}>Click a note to play from there</span>}
             </div>
           )}
         </div>

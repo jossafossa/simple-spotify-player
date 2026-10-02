@@ -44,6 +44,7 @@ const buildSpotifyPlayback = () => ({
   togglePlay: vi.fn(),
   next: vi.fn(),
   previous: vi.fn(),
+  seek: vi.fn(),
 })
 const data = new Uint8Array([1]).buffer
 
@@ -264,7 +265,7 @@ describe('TabViewer', () => {
       const spotify = getByRole('group', { name: 'Spotify playback' })
       await user.click(within(spotify).getByRole('button', { name: 'Previous track' }))
       expect(spotifyPlayback.previous).toHaveBeenCalledOnce()
-      expect(getByRole('group', { name: 'Sound' })).toHaveTextContent('Click the note you hear to line up')
+      expect(getByRole('group', { name: 'Sound' })).toHaveTextContent('Click a note to play from there')
     })
 
     it('pauses Spotify when the tab becomes the sound', async () => {
@@ -279,17 +280,28 @@ describe('TabViewer', () => {
       expect(getByRole('group', { name: 'Tab playback' })).toBeInTheDocument()
     })
 
-    it('aligns to a clicked beat', async () => {
+    it('plays Spotify from a clicked note, keeping the offset', async () => {
       const user = userEvent.setup()
-      const result = alphaTabResult()
-      mockedUseAlphaTab.mockReturnValue(result)
-      const { getByRole } = renderViewer({ spotifyPlayback: buildSpotifyPlayback() })
+      const spotifyPlayback = buildSpotifyPlayback()
+      const { getByRole } = renderViewer({ spotifyPlayback })
       await user.selectOptions(getByRole('combobox', { name: 'Sound' }), 'Spotify')
+      await user.click(getByRole('button', { name: 'Move the tab half a second later' }))
 
       const { onBeatClick } = mockedUseAlphaTab.mock.lastCall![2]!
       act(() => onBeatClick!(15_000))
 
-      expect(getByRole('button', { name: 'Offset +3.0 s, click to reset' })).toBeInTheDocument()
+      expect(spotifyPlayback.seek).toHaveBeenCalledWith(14_500)
+      expect(getByRole('button', { name: 'Offset +0.5 s, click to reset' })).toBeInTheDocument()
+    })
+
+    it('leaves a clicked note to the tab while the tab is the sound', () => {
+      const spotifyPlayback = buildSpotifyPlayback()
+      renderViewer({ spotifyPlayback })
+
+      const { onBeatClick } = mockedUseAlphaTab.mock.lastCall![2]!
+      act(() => onBeatClick!(15_000))
+
+      expect(spotifyPlayback.seek).not.toHaveBeenCalled()
     })
 
     it('nudges and resets the offset', async () => {
