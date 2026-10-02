@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.pnpm-store
+.playwright-cli
+public/font
+public/soundfont
+docker-compose*.yml
+Dockerfile
+.dockerignore
+**/*.test.ts
+**/*.test.tsx

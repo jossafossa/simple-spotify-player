@@ -129,14 +129,32 @@ start and build, which is why those folders are git-ignored.
 ## Running
 
 ```bash
-pnpm dev               # app + tab search in one process
-docker compose up      # the same, in containers: app and tab search service
+pnpm dev               # develop: app and tab search, with hot reload
+docker compose up -d   # host: the production build, app and search together
 ```
 
-Both serve the app on <http://127.0.0.1:5173> — Spotify only accepts the
-loopback IP, not `localhost`, as a redirect URI. `WEB_PORT=5174 docker
-compose up` moves it if 5173 is taken (add that redirect URI to the Spotify
-app too).
+`pnpm dev` serves on <http://127.0.0.1:5173> — Spotify only accepts the
+loopback IP, not `localhost`, as a plain-http redirect URI.
+
+### Hosting
+
+The root `Dockerfile` builds the app and runs `server/main.ts`, which serves
+both the built site and the tab search on **port 3000**. `docker compose up
+-d` builds and starts it; `APP_PORT=8080 docker compose up -d` publishes it on
+another port.
+
+On **Coolify**: add the repository and choose the *Dockerfile* (or *Docker
+Compose*) build pack, keeping the defaults — Coolify gives the app a domain
+with HTTPS on port 3000. Then, in your Spotify app's settings, add
+`https://<that domain>/` as a Redirect URI. That is the only manual step:
+the Client ID is entered in the app itself.
+
+Anywhere else, put HTTPS in front of port 3000 — Spotify refuses plain-http
+redirect URIs other than `127.0.0.1`.
+
+For developing inside containers instead, `docker compose -f
+docker-compose.dev.yml up` runs the Vite dev server and the search service
+with hot reload.
 
 ### Tab search service
 
@@ -152,33 +170,15 @@ TypeScript with no dependencies, run as-is by Node's type stripping.
   file. The path must have exactly that shape, so the route cannot be used
   to fetch anything else.
 
-Under `pnpm dev` and `pnpm preview` Vite mounts it as middleware. In
-`docker-compose.yml` it is its own `tab-search` container, and the `web`
-container proxies `/api` to it (`TAB_SEARCH_URL`). `pnpm tab-search` runs it
-alone on port 8787.
+Under `pnpm dev` and `pnpm preview` Vite mounts it as middleware; in the
+Docker image the same server also serves the built app (`STATIC_DIR`).
+`pnpm tab-search` runs the search alone on port 8787.
 
-#### Hosting it on its own URL
-
-`server/Dockerfile` builds the service alone, for any host that puts a
-container behind a domain:
-
-```bash
-docker build -t tab-search server
-docker run -p 8787:8787 -e ALLOWED_ORIGINS=https://player.example.com tab-search
-```
-
-Point the app at it when building:
-
-```bash
-VITE_TAB_SEARCH_URL=https://tabs.example.com pnpm build
-```
-
-- `VITE_TAB_SEARCH_URL` — the service's base URL; the app calls
-  `<url>/api/tabs/…`. Left empty, the app uses its own origin.
-- `ALLOWED_ORIGINS` — comma-separated origins the app is served from, so the
-  browser lets it read the service's answers; `*` allows any. Not needed
-  when app and service share an origin.
-- `PORT` / `HOST` — where the service listens inside the container.
+To host the search apart from the app, run the same image (or `node
+server/main.ts`) there and build the app with
+`VITE_TAB_SEARCH_URL=https://<search domain> pnpm build`. Set
+`ALLOWED_ORIGINS` on the search to the app's origin (comma-separated, `*`
+for any) so browsers let the app read its answers.
 
 ## Requirements
 
