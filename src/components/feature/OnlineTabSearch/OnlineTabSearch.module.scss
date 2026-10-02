@@ -1,6 +1,7 @@
 @use '../../theme' as t;
 
-.section {
+.section,
+.group {
   display: flex;
   flex-direction: column;
   gap: t.$s-2;
@@ -10,12 +11,38 @@
   @include t.section-heading;
 }
 
-.search {
+.subheading {
+  @include t.micro-label;
+
+  margin: t.$s-2 0 0;
+  font-size: 10px;
+  color: t.$text-faint;
+}
+
+.form {
+  display: flex;
+  gap: t.$s-1;
+}
+
+.field {
   @include t.field;
+
+  flex: 1;
+  min-width: 0;
+}
+
+.submit {
+  @include t.button-primary;
+
+  flex: 0 0 auto;
+  padding: t.$s-2 t.$s-3;
 }
 
 .list {
   @include t.ruled-list;
+
+  max-height: 260px;
+  overflow-y: auto;
 }
 
 .row {
@@ -25,33 +52,29 @@
   padding: t.$s-2 0;
 }
 
-.name {
+.text {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding: 0;
-  border: 0;
-  background: none;
-  text-align: left;
 }
 
-button.name {
-  @include t.button-base;
-
-  &:hover .tabName {
-    color: t.$accent;
-  }
-}
-
-.tabName {
+.title,
+.meta {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.title {
   font-family: t.$serif;
   font-size: t.$fs-body;
   color: t.$text;
+}
+
+.artist {
+  color: t.$text-muted;
 }
 
 .meta {
@@ -61,36 +84,59 @@ button.name {
   color: t.$text-faint;
 }
 
-.action {
-  @include t.button-quiet;
-
-  align-self: center;
+.source {
+  color: t.$accent;
 }
 
 .add {
   @include t.button-ghost;
+
+  flex: 0 0 auto;
 }
 
+.open {
+  @include t.button-quiet;
+
+  flex: 0 0 auto;
+  align-self: center;
+  text-decoration: none;
+}
+
+.links {
+  display: flex;
+  gap: t.$s-3;
+  margin: 0;
+}
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: t.$s-2;
+  padding: t.$s-3;
+  border: 1px solid t.$rule;
+  border-left: 2px solid t.$rule-strong;
+  border-radius: t.$radius-sm;
+  background: t.$ink-raised;
+}
+
+.noticeText,
 .empty,
 .hint {
   margin: 0;
   font-size: t.$fs-small;
   line-height: t.$lh-body;
   color: t.$text-muted;
+
+  code {
+    @include t.numerals;
+
+    color: t.$text;
+  }
 }
 
 .hint {
   font-size: t.$fs-fine;
   color: t.$text-faint;
-}
-
-.upload {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: t.$s-2;
-  padding-top: t.$s-3;
-  border-top: 1px solid t.$rule;
 }
 
 .error {

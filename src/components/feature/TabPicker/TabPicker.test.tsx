@@ -97,15 +97,9 @@ describe('TabPicker', () => {
     expect(getByText(/Your library is empty/)).toBeInTheDocument()
   })
 
-  it('links to searches for the song on tab sites, in a new tab', () => {
-    const { getByRole } = renderPicker()
+  it('places the online search it is given', () => {
+    const { getByText } = renderPicker({ onlineSearch: <p>Online search here</p> })
 
-    const songsterr = getByRole('link', { name: 'Songsterr ↗' })
-    expect(songsterr).toHaveAttribute('href', 'https://www.songsterr.com/?pattern=Nightwish%20Nemo')
-    expect(songsterr).toHaveAttribute('target', '_blank')
-    expect(getByRole('link', { name: 'Ultimate Guitar ↗' })).toHaveAttribute(
-      'href',
-      'https://www.ultimate-guitar.com/search.php?search_type=title&value=Nightwish%20Nemo',
-    )
+    expect(getByText('Online search here')).toBeInTheDocument()
   })
 })

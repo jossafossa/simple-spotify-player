@@ -1,8 +1,9 @@
+import { OnlineTabSearch } from '~/components/feature/OnlineTabSearch'
 import { TabLibrary } from '~/components/feature/TabLibrary'
 import { TabPicker } from '~/components/feature/TabPicker'
 import { TabViewer } from '~/components/feature/TabViewer'
 import type { ReactNode } from 'react'
-import type { UseTabWorkspaceResult } from '~/hooks/useTabWorkspace'
+import { onlineQueryFor, type UseTabWorkspaceResult } from '~/hooks/useTabWorkspace'
 import type { TabSong } from '~/lib/types'
 
 type TabDialogsProps = {
@@ -28,6 +29,19 @@ export const TabDialogs = ({ workspace, onPlaySong }: TabDialogsProps) => {
         onUpload={(file) => workspace.uploadTab(file, pickerSong)}
         onOpen={(tabId) => workspace.openTabInViewer(pickerSong, tabId)}
         onClose={workspace.closePicker}
+        onlineSearch={
+          <OnlineTabSearch
+            // Fresh fields per song, starting from its artist and title.
+            key={pickerSong.uri}
+            song={pickerSong}
+            initialQuery={onlineQueryFor(pickerSong)}
+            state={workspace.online.state}
+            addingIds={workspace.online.addingIds}
+            addedIds={workspace.online.addedIds}
+            onSearch={workspace.online.search}
+            onAdd={workspace.online.addOnlineTab}
+          />
+        }
       />
     )
   }

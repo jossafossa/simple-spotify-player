@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import { useLibraryBackup, type UseLibraryBackupResult } from '~/hooks/useLibraryBackup'
+import { useOnlineTabSearch, type UseOnlineTabSearchResult } from '~/hooks/useOnlineTabSearch'
 import { useTabData, type UseTabDataResult } from '~/hooks/useTabData'
 import { useTabLibrary, type UseTabLibraryResult } from '~/hooks/useTabLibrary'
+import {
+  cleanSongTitle,
+  downloadOnlineTab,
+  libraryNameFor,
+  type OnlineTab,
+} from '~/lib/onlineTabSearch'
 import type { SongRef, TabFile, TabSong } from '~/lib/types'
 
 type OpenTab = {
@@ -29,7 +36,19 @@ export type UseTabWorkspaceResult = {
   closeLibrary: () => void
   uploadTab: (file: File, song?: SongRef) => void
   deleteTab: (tab: TabFile) => void
+  online: UseOnlineTabSearchResult & {
+    addingIds: string[]
+    addedIds: string[]
+    /** Downloads a found tab into the library and links it to the picker's song. */
+    addOnlineTab: (tab: OnlineTab) => void
+  }
 }
+
+/** What the online search starts with for a song. */
+export const onlineQueryFor = (song: SongRef) => ({
+  artist: song.artistNames[0] ?? '',
+  title: cleanSongTitle(song.name),
+})
 
 const describeError = (error: unknown): string =>
   error instanceof Error ? error.message : 'Could not store that file.'
@@ -46,6 +65,9 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
   const [isLibraryOpen, setIsLibraryOpen] = useState(false)
   const [uploadError, setUploadError] = useState<string>()
   const data = useTabData(openTabState?.tabId)
+  const onlineSearch = useOnlineTabSearch()
+  const [addingIds, setAddingIds] = useState<string[]>([])
+  const [addedIds, setAddedIds] = useState<string[]>([])
 
   const songByUri = new Map<string, TabSong>(library.songs.map((song) => [song.uri, song]))
   const tabById = new Map(library.tabs.map((tab) => [tab.id, tab]))
@@ -72,7 +94,29 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
   const openPicker = (song: SongRef) => {
     setUploadError(undefined)
     setIsLibraryOpen(false)
+    setAddedIds([])
     setPickerSong(song)
+    // Searching costs requests to three sites, so it waits for the button.
+    onlineSearch.reset()
+  }
+
+  const addOnlineTab = (tab: OnlineTab) => {
+    const song = pickerSong
+    if (!song) {
+      return
+    }
+
+    setUploadError(undefined)
+    setAddingIds((current) => [...current, tab.id])
+
+    downloadOnlineTab(tab)
+      .then((file) => library.addTabFile(file, song, libraryNameFor(tab)))
+      .then(() => setAddedIds((current) => [...current, tab.id]))
+      .catch((error: unknown) => {
+        console.error('Could not add the tab from', tab.source, error)
+        setUploadError(describeError(error))
+      })
+      .finally(() => setAddingIds((current) => current.filter((id) => id !== tab.id)))
   }
 
   const openSongTabs = (song: SongRef) => {
@@ -126,5 +170,6 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
     closeLibrary: () => setIsLibraryOpen(false),
     uploadTab,
     deleteTab,
+    online: { ...onlineSearch, addingIds, addedIds, addOnlineTab },
   }
 }

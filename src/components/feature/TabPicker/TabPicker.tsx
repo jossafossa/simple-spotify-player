@@ -1,10 +1,9 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { FileButton } from '~/components/ui/FileButton'
 import { Modal } from '~/components/ui/Modal'
 import { formatFileSize } from '~/lib/formatFileSize'
 import { matchesSearch } from '~/lib/matchesSearch'
 import { TAB_FILE_ACCEPT } from '~/lib/tabFormat'
-import { buildTabSearchLinks } from '~/lib/tabSearchLinks'
 import type { SongRef, TabFile } from '~/lib/types'
 import styles from './TabPicker.module.scss'
 
@@ -19,6 +18,8 @@ type TabPickerProps = {
   onUpload: (file: File) => void
   onOpen: (tabId: string) => void
   onClose: () => void
+  /** The online search, placed between the library and the upload. */
+  onlineSearch?: ReactNode
 }
 
 const FORMAT_LABELS: Record<TabFile['format'], string> = {
@@ -40,6 +41,7 @@ export const TabPicker = ({
   onUpload,
   onOpen,
   onClose,
+  onlineSearch,
 }: TabPickerProps) => {
   const [query, setQuery] = useState('')
   const linkedTabs = linkedTabIds.flatMap((id) => tabs.filter((tab) => tab.id === id))
@@ -117,26 +119,7 @@ export const TabPicker = ({
         )}
       </section>
 
-      <section className={styles.section} aria-label="Find online">
-        <h3 className={styles.heading}>Find online</h3>
-        <p className={styles.links}>
-          {buildTabSearchLinks(song).map((link) => (
-            <a
-              key={link.site}
-              className={styles.link}
-              href={link.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {link.site} ↗
-            </a>
-          ))}
-        </p>
-        <p className={styles.hint}>
-          Opens a search for this song. Download the Guitar Pro file there, then
-          upload it below.
-        </p>
-      </section>
+      {onlineSearch}
 
       <section className={styles.upload}>
         <FileButton label="Upload a new tab" accept={TAB_FILE_ACCEPT} onSelect={onUpload} />

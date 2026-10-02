@@ -1,7 +1,27 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { downloadOnlineTab, searchOnlineTabs, type OnlineTab } from '~/lib/onlineTabSearch'
 import { resetTabDatabase } from '~/test/resetTabDatabase'
 import { useTabWorkspace } from './useTabWorkspace'
+
+vi.mock('~/lib/onlineTabSearch', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('~/lib/onlineTabSearch')>()),
+  searchOnlineTabs: vi.fn(() => Promise.resolve({ results: [], failures: [] })),
+  downloadOnlineTab: vi.fn(),
+}))
+
+const onlineTab: OnlineTab = {
+  id: 'gprotab:/en/tabs/nightwish/nemo-2',
+  source: 'gprotab',
+  artist: 'Nightwish',
+  title: 'Nemo',
+  kind: 'Guitar Pro · version 2',
+  url: 'https://gprotab.net/en/tabs/nightwish/nemo-2',
+  downloadPath: '/en/tabs/nightwish/nemo-2',
+  rating: undefined,
+  votes: undefined,
+  relevance: 1,
+}
 
 const song = { uri: 'spotify:track:nemo', name: 'Nemo', artistNames: ['Nightwish'] }
 const gpFile = (name = 'Nemo.gp5') => new File([new Uint8Array([1])], name)
@@ -80,5 +100,46 @@ describe('useTabWorkspace', () => {
 
     expect(result.current.openTab).toBeUndefined()
     await waitFor(() => expect(result.current.library.tabs).toEqual([]))
+  })
+
+  it('waits for the button before searching online, starting from a clean slate', async () => {
+    const { result } = await renderWorkspace()
+    act(() => result.current.online.search({ artist: 'Old', title: 'Search' }))
+
+    act(() => result.current.openPicker({ ...song, name: 'Nemo - Remastered 2021' }))
+
+    expect(result.current.online.state).toEqual({ kind: 'idle' })
+    vi.mocked(searchOnlineTabs).mockClear()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(searchOnlineTabs).not.toHaveBeenCalled()
+  })
+
+  it('downloads a found tab into the library, linked to the picker’s song', async () => {
+    vi.mocked(downloadOnlineTab).mockResolvedValue(new File([new Uint8Array([1])], 'nightwish-nemo_2.gp4'))
+    const { result } = await renderWorkspace()
+    act(() => result.current.openPicker(song))
+
+    act(() => result.current.online.addOnlineTab(onlineTab))
+    expect(result.current.online.addingIds).toEqual([onlineTab.id])
+
+    await waitFor(() => expect(result.current.online.addedIds).toEqual([onlineTab.id]))
+    expect(result.current.online.addingIds).toEqual([])
+    expect(result.current.library.tabs[0]).toMatchObject({
+      name: 'Nemo · GProTab version 2',
+      fileName: 'nightwish-nemo_2.gp4',
+    })
+    expect(result.current.tabCounts).toEqual({ [song.uri]: 1 })
+  })
+
+  it('reports a found tab it could not download', async () => {
+    vi.mocked(downloadOnlineTab).mockRejectedValue(new Error('Could not download “Nemo”.'))
+    const { result } = await renderWorkspace()
+    act(() => result.current.openPicker(song))
+
+    act(() => result.current.online.addOnlineTab(onlineTab))
+
+    await waitFor(() => expect(result.current.uploadError).toBe('Could not download “Nemo”.'))
+    expect(result.current.online.addingIds).toEqual([])
+    expect(result.current.library.tabs).toEqual([])
   })
 })

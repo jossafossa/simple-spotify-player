@@ -74,10 +74,14 @@ Tabs are linked to songs and stored in the browser — no server involved.
   (with a following cursor), separately from Spotify; pick another instrument
   track or another tab on the song; and Spotify's own play/previous/next to
   play along. *← Back to player* (or Escape) returns.
-- **Finding tabs** — the add-tab dialog links to Songsterr and Ultimate
-  Guitar searches for the song. Neither lets a browser-only app search them
-  directly (no CORS, and their files sit behind accounts), so download the
-  Guitar Pro file there and upload it here.
+- **Finding tabs** — the add-tab dialog searches tab sites for the song
+  when you press *Search* (artist and title prefilled, with Spotify's
+  "- Remastered 2021" and "(feat. …)" stripped). **Free to download** results — from
+  [GProTab](https://gprotab.net), which shares Guitar Pro files with no
+  account — are added with one click: downloaded, stored and linked to the
+  song. Songsterr and Ultimate Guitar results are listed too, with ratings
+  and votes, but their files need an account there, so they open on their
+  site: download there, then upload.
 - **Library** — *Tab library* lists every song with tabs (open a tab, play the
   song on its own, manage its tabs) and every file (open, delete), all
   searchable by song, artist or tab name.
@@ -106,6 +110,60 @@ start and build, which is why those folders are git-ignored.
 | M         | Mute / unmute    |
 | S         | Shuffle on / off |
 | N / P     | Next / previous  |
+
+## Running
+
+```bash
+pnpm dev               # app + tab search in one process
+docker compose up      # the same, in containers: app and tab search service
+```
+
+Both serve the app on <http://127.0.0.1:5173> — Spotify only accepts the
+loopback IP, not `localhost`, as a redirect URI. `WEB_PORT=5174 docker
+compose up` moves it if 5173 is taken (add that redirect URI to the Spotify
+app too).
+
+### Tab search service
+
+`server/` is the one piece with a server: browsers may not call tab sites
+directly, so it searches them on the app's behalf. It is plain Node 22
+TypeScript with no dependencies, run as-is by Node's type stripping.
+
+- `GET /api/tabs/search?artist=&title=` asks GProTab, Songsterr and
+  Ultimate Guitar in parallel, ranks the results (title match, then artist,
+  downloadable first, then votes), and reports any source that failed
+  without failing the search. Pages are cached for ten minutes.
+- `GET /api/tabs/download?path=/en/tabs/<artist>/<song>` fetches a GProTab
+  file. The path must have exactly that shape, so the route cannot be used
+  to fetch anything else.
+
+Under `pnpm dev` and `pnpm preview` Vite mounts it as middleware. In
+`docker-compose.yml` it is its own `tab-search` container, and the `web`
+container proxies `/api` to it (`TAB_SEARCH_URL`). `pnpm tab-search` runs it
+alone on port 8787.
+
+#### Hosting it on its own URL
+
+`server/Dockerfile` builds the service alone, for any host that puts a
+container behind a domain:
+
+```bash
+docker build -t tab-search server
+docker run -p 8787:8787 -e ALLOWED_ORIGINS=https://player.example.com tab-search
+```
+
+Point the app at it when building:
+
+```bash
+VITE_TAB_SEARCH_URL=https://tabs.example.com pnpm build
+```
+
+- `VITE_TAB_SEARCH_URL` — the service's base URL; the app calls
+  `<url>/api/tabs/…`. Left empty, the app uses its own origin.
+- `ALLOWED_ORIGINS` — comma-separated origins the app is served from, so the
+  browser lets it read the service's answers; `*` allows any. Not needed
+  when app and service share an origin.
+- `PORT` / `HOST` — where the service listens inside the container.
 
 ## Requirements
 

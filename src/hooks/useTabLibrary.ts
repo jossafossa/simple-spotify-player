@@ -17,8 +17,11 @@ export type UseTabLibraryResult = {
   tabs: TabFile[]
   /** In the order they were first given a tab. */
   songs: TabSong[]
-  /** Stores a file in the library, and links it to the song when one is given. */
-  addTabFile: (file: File, song?: SongRef) => Promise<TabFile>
+  /**
+   * Stores a file in the library, and links it to the song when one is given.
+   * The name defaults to the file name without its extension.
+   */
+  addTabFile: (file: File, song?: SongRef, name?: string) => Promise<TabFile>
   linkTab: (song: SongRef, tabId: string) => Promise<void>
   unlinkTab: (songUri: string, tabId: string) => Promise<void>
   removeTab: (tabId: string) => Promise<void>
@@ -139,7 +142,7 @@ export const useTabLibrary = (): UseTabLibraryResult => {
   )
 
   const addTabFile = useCallback(
-    async (file: File, song?: SongRef) => {
+    async (file: File, song?: SongRef, name?: string) => {
       const format = detectTabFormat(file.name)
       if (!format) {
         throw new UnsupportedTabFileError(file.name)
@@ -147,7 +150,7 @@ export const useTabLibrary = (): UseTabLibraryResult => {
 
       const tab: TabFile = {
         id: createId(),
-        name: stripExtension(file.name),
+        name: name ?? stripExtension(file.name),
         fileName: file.name,
         format,
         sizeBytes: file.size,
