@@ -27,6 +27,10 @@ export type UseAlphaTabResult = {
 const OWN_SEEK_TOLERANCE_MS = 100
 
 type AlphaTabOptions = {
+  /** The instrument track to show first, when the file has that many. */
+  initialTrackIndex?: number
+  /** Called when the user picks another instrument track. */
+  onTrackSelect?: (index: number) => void
   /**
    * Called with the song time of a beat the user clicked in the score —
    * alphaTab moves its cursor there.
@@ -48,7 +52,7 @@ type AlphaTabElements = {
 export const useAlphaTab = (
   { container, scrollElement }: AlphaTabElements,
   data: ArrayBuffer | undefined,
-  { onBeatClick }: AlphaTabOptions = {},
+  { onBeatClick, initialTrackIndex = 0, onTrackSelect }: AlphaTabOptions = {},
 ): UseAlphaTabResult => {
   // Only ever driven imperatively, never rendered, so a ref rather than state.
   const apiRef = useRef<AlphaTabApi | undefined>(undefined)
@@ -68,9 +72,12 @@ export const useAlphaTab = (
   const isBeatClickRef = useRef(false)
   const lastOutsideTargetRef = useRef<number | undefined>(undefined)
   const onBeatClickRef = useRef(onBeatClick)
+  // Read when a score loads, not on every render: it only picks where to start.
+  const initialTrackIndexRef = useRef(initialTrackIndex)
 
   useEffect(() => {
     onBeatClickRef.current = onBeatClick
+    initialTrackIndexRef.current = initialTrackIndex
   })
 
   // A new file starts from scratch, during render so the old score's tracks
@@ -115,7 +122,13 @@ export const useAlphaTab = (
         instance.scoreLoaded.on((score) => {
           setTitle(score.title || undefined)
           setTracks(score.tracks.map((track) => ({ index: track.index, name: track.name })))
-          setSelectedTrackIndex(0)
+
+          // A remembered track the file no longer has falls back to the first.
+          const remembered = score.tracks[initialTrackIndexRef.current]
+          setSelectedTrackIndex(remembered ? initialTrackIndexRef.current : 0)
+          if (remembered && remembered.index !== 0) {
+            instance.renderTracks([remembered])
+          }
         })
         instance.renderFinished.on(() => setStatus('ready'))
         instance.error.on((error) => {
@@ -178,6 +191,7 @@ export const useAlphaTab = (
     api.stop()
     setSelectedTrackIndex(index)
     api.renderTracks([track])
+    onTrackSelect?.(index)
   }
 
   const playPause = () => {

@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { readTabSyncEnabled, readTabSyncOffset } from '~/lib/tabSyncStorage'
+import { readTabSettings } from '~/lib/tabSettingsStorage'
+import { readTabSyncEnabled } from '~/lib/tabSyncStorage'
 import { useTabSync } from './useTabSync'
 
 type Props = { positionMs: number | undefined; canSeek: boolean }
@@ -61,19 +62,19 @@ describe('useTabSync', () => {
 
     act(() => result.current.nudge(500))
     expect(seekTo).toHaveBeenLastCalledWith(1_500)
-    expect(readTabSyncOffset('tab-1')).toBe(500)
+    expect(readTabSettings('tab-1').offsetMs).toBe(500)
 
     act(() => result.current.nudge(-3_000))
     expect(seekTo).toHaveBeenLastCalledWith(0)
 
     act(() => result.current.resetOffset())
     expect(result.current.offsetMs).toBe(0)
-    expect(readTabSyncOffset('tab-1')).toBe(0)
+    expect(readTabSettings('tab-1').offsetMs).toBeUndefined()
   })
 
   it('starts from the remembered setting and offset', () => {
     localStorage.setItem('spotify-player:tab-sync', 'true')
-    localStorage.setItem('spotify-player:tab-sync-offsets', JSON.stringify({ 'tab-1': -1_500 }))
+    localStorage.setItem('spotify-player:tab-settings', JSON.stringify({ 'tab-1': { offsetMs: -1_500 } }))
 
     const { result, seekTo } = renderSync({ positionMs: 4_000, canSeek: true })
 
@@ -83,7 +84,7 @@ describe('useTabSync', () => {
   })
 
   it('ignores stored offsets it cannot read', () => {
-    localStorage.setItem('spotify-player:tab-sync-offsets', '{nope')
+    localStorage.setItem('spotify-player:tab-settings', '{nope')
 
     expect(renderSync().result.current.offsetMs).toBe(0)
   })

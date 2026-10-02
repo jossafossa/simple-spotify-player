@@ -4,6 +4,7 @@ import { useFullPageView } from '~/hooks/useFullPageView'
 import { useTabSync } from '~/hooks/useTabSync'
 import type { TabDataStatus } from '~/hooks/useTabData'
 import { isSameSong } from '~/lib/songMatch'
+import { readTabSettings, saveTabSettings } from '~/lib/tabSettingsStorage'
 import { isRenderableFormat } from '~/lib/tabFormat'
 import type { SongRef, TabFile } from '~/lib/types'
 import styles from './TabViewer.module.scss'
@@ -73,6 +74,8 @@ export const TabViewer = ({
   const alignToRef = useRef<(tabTimeMs: number) => void>(() => {})
   const alphaTab = useAlphaTab({ container, scrollElement }, isRenderable ? data : undefined, {
     onBeatClick: (tabTimeMs) => alignToRef.current(tabTimeMs),
+    initialTrackIndex: readTabSettings(tab.id).trackIndex,
+    onTrackSelect: (trackIndex) => saveTabSettings(tab.id, { trackIndex }),
   })
   useFullPageView(onClose)
   const sync = useTabSync({

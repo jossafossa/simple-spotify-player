@@ -1,4 +1,5 @@
 import type { TabWithData } from './tabDatabase'
+import { parseAllTabSettings, type TabSettings } from './tabSettingsStorage'
 import type { PlaylistSummary, TabFile, TabSong } from './types'
 
 const BACKUP_APP = 'simple-spotify-player'
@@ -13,12 +14,15 @@ export type LibraryBackup = {
   tabs: BackupTab[]
   songs: TabSong[]
   pinnedPlaylists: PlaylistSummary[]
+  /** Per tab: sync offset and instrument track. Missing from older backups. */
+  tabSettings?: Record<string, TabSettings>
 }
 
 export type RestoredLibrary = {
   tabs: TabWithData[]
   songs: TabSong[]
   pinnedPlaylists: PlaylistSummary[]
+  tabSettings: Record<string, TabSettings>
 }
 
 export class InvalidBackupError extends Error {
@@ -56,6 +60,7 @@ export const buildLibraryBackup = ({
   tabs,
   songs,
   pinnedPlaylists,
+  tabSettings,
 }: RestoredLibrary): LibraryBackup => ({
   app: BACKUP_APP,
   version: BACKUP_VERSION,
@@ -63,6 +68,7 @@ export const buildLibraryBackup = ({
   tabs: tabs.map(({ tab, data }) => ({ ...tab, dataBase64: toBase64(data) })),
   songs,
   pinnedPlaylists,
+  tabSettings,
 })
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -109,7 +115,7 @@ export const parseLibraryBackup = (text: string): RestoredLibrary => {
     throw new InvalidBackupError(`it has version ${String(parsed.version)}`)
   }
 
-  const { tabs, songs, pinnedPlaylists } = parsed
+  const { tabs, songs, pinnedPlaylists, tabSettings } = parsed
 
   if (!Array.isArray(tabs) || !tabs.every(isBackupTab)) {
     throw new InvalidBackupError('its tabs are damaged')
@@ -133,6 +139,9 @@ export const parseLibraryBackup = (text: string): RestoredLibrary => {
     }),
     songs,
     pinnedPlaylists,
+    // Optional, and only advice about how to show a tab: kept where well
+    // formed rather than refusing the whole backup over it.
+    tabSettings: parseAllTabSettings(tabSettings ?? {}),
   }
 }
 
@@ -158,4 +167,16 @@ export const mergePinnedPlaylists = (
 ): PlaylistSummary[] => {
   const known = new Set(existing.map((playlist) => playlist.uri))
   return [...existing, ...imported.filter((playlist) => !known.has(playlist.uri))]
+}
+
+/** Imported settings win per field; tabs only set here keep theirs. */
+export const mergeTabSettings = (
+  existing: Record<string, TabSettings>,
+  imported: Record<string, TabSettings>,
+): Record<string, TabSettings> => {
+  const merged = { ...existing }
+  for (const [tabId, settings] of Object.entries(imported)) {
+    merged[tabId] = { ...merged[tabId], ...settings }
+  }
+  return merged
 }

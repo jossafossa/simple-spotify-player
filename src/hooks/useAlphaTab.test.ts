@@ -55,8 +55,11 @@ const elements = () => ({
 
 const data = new Uint8Array([1, 2]).buffer
 
-const renderReady = async (onBeatClick?: (timeMs: number) => void) => {
-  const view = renderHook(({ input }) => useAlphaTab(input.elements, input.data, { onBeatClick }), {
+const renderReady = async (
+  onBeatClick?: (timeMs: number) => void,
+  trackOptions: { initialTrackIndex?: number; onTrackSelect?: (index: number) => void } = {},
+) => {
+  const view = renderHook(({ input }) => useAlphaTab(input.elements, input.data, { onBeatClick, ...trackOptions }), {
     initialProps: { input: { elements: elements(), data: data as ArrayBuffer | undefined } },
   })
   await waitFor(() => expect(FakeAlphaTabApi.instances).toHaveLength(1))
@@ -108,10 +111,12 @@ describe('useAlphaTab', () => {
     ])
   })
 
-  it('switches track, stopping playback first', async () => {
-    const { result, api } = await renderReady()
+  it('switches track, stopping playback first, and reports it', async () => {
+    const onTrackSelect = vi.fn()
+    const { result, api } = await renderReady(undefined, { onTrackSelect })
 
     act(() => result.current.selectTrack(1))
+    expect(onTrackSelect).toHaveBeenCalledWith(1)
 
     expect(api.stop).toHaveBeenCalled()
     expect(api.renderTracks).toHaveBeenCalledWith([api.score.tracks[1]])
@@ -188,5 +193,17 @@ describe('useAlphaTab', () => {
 
     act(() => api.playerPositionChanged.emit({ isSeek: true, currentTime: 50_000 }))
     expect(onBeatClick).toHaveBeenCalledOnce()
+  })
+
+  it('starts on the remembered track, or the first when the file has fewer', async () => {
+    const { result, api } = await renderReady(undefined, { initialTrackIndex: 1 })
+
+    expect(result.current.selectedTrackIndex).toBe(1)
+    expect(api.renderTracks).toHaveBeenCalledWith([{ index: 1, name: 'Bass' }])
+
+    FakeAlphaTabApi.instances = []
+    const fewer = await renderReady(undefined, { initialTrackIndex: 5 })
+    expect(fewer.result.current.selectedTrackIndex).toBe(0)
+    expect(fewer.api.renderTracks).not.toHaveBeenCalled()
   })
 })

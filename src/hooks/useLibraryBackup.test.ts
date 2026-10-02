@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { buildLibraryBackup } from '~/lib/libraryBackup'
 import { readPinnedPlaylists, savePinnedPlaylists } from '~/lib/pinnedPlaylistsStorage'
 import { readTabData, readTabLibrary, writeTabLibrary } from '~/lib/tabDatabase'
+import { readTabSettings, saveTabSettings } from '~/lib/tabSettingsStorage'
 import type { TabFile } from '~/lib/types'
 import { resetTabDatabase } from '~/test/resetTabDatabase'
 import { useLibraryBackup } from './useLibraryBackup'
@@ -32,6 +33,7 @@ describe('useLibraryBackup', () => {
   it('exports tabs, songs and pins as one file to save', async () => {
     await writeTabLibrary({ tabs: [{ tab, data: new Uint8Array([4, 2]).buffer }], songs: [song] })
     savePinnedPlaylists([pin])
+    saveTabSettings('tab-1', { trackIndex: 2 })
     let savedBlob: Blob | undefined
     vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => {
       savedBlob = blob as Blob
@@ -47,6 +49,7 @@ describe('useLibraryBackup', () => {
     const backup = JSON.parse(await savedBlob!.text())
     expect(backup).toMatchObject({ app: 'simple-spotify-player', songs: [song], pinnedPlaylists: [pin] })
     expect(backup.tabs[0]).toMatchObject({ id: 'tab-1', dataBase64: 'BAI=' })
+    expect(backup.tabSettings).toEqual({ 'tab-1': { trackIndex: 2 } })
     expect(result.current.status).toEqual({ kind: 'done', message: 'Exported 1 tab and 1 song.' })
   })
 
@@ -61,6 +64,7 @@ describe('useLibraryBackup', () => {
       tabs: [{ tab, data: new Uint8Array([7]).buffer }],
       songs: [song],
       pinnedPlaylists: [pin],
+      tabSettings: { 'tab-1': { offsetMs: 750 } },
     })
     const onImported = vi.fn().mockResolvedValue(undefined)
 
@@ -72,6 +76,7 @@ describe('useLibraryBackup', () => {
     expect(library.songs).toEqual([{ ...song, tabIds: ['tab-0', 'tab-1'] }])
     expect([...new Uint8Array((await readTabData('tab-1'))!)]).toEqual([7])
     expect(readPinnedPlaylists()).toEqual([other, pin])
+    expect(readTabSettings('tab-1')).toEqual({ offsetMs: 750 })
     expect(onImported).toHaveBeenCalledOnce()
     expect(result.current.status).toEqual({ kind: 'done', message: 'Imported 1 tab and 1 song.' })
   })

@@ -7,6 +7,7 @@ import {
   writeTabLibrary,
 } from '~/lib/tabDatabase'
 import { detectTabFormat, stripExtension } from '~/lib/tabFormat'
+import { deleteTabSettings } from '~/lib/tabSettingsStorage'
 import type { SongRef, TabFile, TabSong } from '~/lib/types'
 
 export type TabLibraryStatus = 'loading' | 'ready' | 'error'
@@ -171,6 +172,7 @@ export const useTabLibrary = (): UseTabLibraryResult => {
 
   const removeTab = useCallback(async (tabId: string) => {
     await deleteTab(tabId)
+    deleteTabSettings(tabId)
     setTabs((current) => current.filter((tab) => tab.id !== tabId))
     setSongs((current) =>
       current

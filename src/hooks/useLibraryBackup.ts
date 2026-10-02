@@ -3,8 +3,10 @@ import {
   buildLibraryBackup,
   mergePinnedPlaylists,
   mergeSongs,
+  mergeTabSettings,
   parseLibraryBackup,
 } from '~/lib/libraryBackup'
+import { readAllTabSettings, writeAllTabSettings } from '~/lib/tabSettingsStorage'
 import { readPinnedPlaylists, savePinnedPlaylists } from '~/lib/pinnedPlaylistsStorage'
 import { readTabData, readTabLibrary, writeTabLibrary, type TabWithData } from '~/lib/tabDatabase'
 
@@ -60,6 +62,7 @@ export const useLibraryBackup = (onImported: () => Promise<void>): UseLibraryBac
         tabs: tabsWithData,
         songs,
         pinnedPlaylists: readPinnedPlaylists(),
+        tabSettings: readAllTabSettings(),
       })
       saveFile(JSON.stringify(backup), backupFileName())
       setStatus({
@@ -84,6 +87,7 @@ export const useLibraryBackup = (onImported: () => Promise<void>): UseLibraryBac
         songs: mergeSongs(existing.songs, restored.songs),
       })
       savePinnedPlaylists(mergePinnedPlaylists(readPinnedPlaylists(), restored.pinnedPlaylists))
+      writeAllTabSettings(mergeTabSettings(readAllTabSettings(), restored.tabSettings))
       await onImported()
 
       setStatus({

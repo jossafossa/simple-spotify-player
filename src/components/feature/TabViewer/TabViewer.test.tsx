@@ -107,6 +107,17 @@ describe('TabViewer', () => {
     )
   })
 
+  it('starts on the remembered track and remembers the one picked', () => {
+    localStorage.setItem('spotify-player:tab-settings', JSON.stringify({ a: { trackIndex: 1 } }))
+    renderViewer()
+
+    const options = mockedUseAlphaTab.mock.lastCall![2]!
+    expect(options.initialTrackIndex).toBe(1)
+
+    options.onTrackSelect!(2)
+    expect(JSON.parse(localStorage.getItem('spotify-player:tab-settings')!)).toEqual({ a: { trackIndex: 2 } })
+  })
+
   it('hands the file to alphaTab', () => {
     renderViewer()
 

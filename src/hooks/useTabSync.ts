@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  readTabSyncEnabled,
-  readTabSyncOffset,
-  saveTabSyncEnabled,
-  saveTabSyncOffset,
-} from '~/lib/tabSyncStorage'
+import { readTabSettings, saveTabSettings } from '~/lib/tabSettingsStorage'
+import { readTabSyncEnabled, saveTabSyncEnabled } from '~/lib/tabSyncStorage'
 
 export type UseTabSyncResult = {
   isEnabled: boolean
@@ -36,7 +32,7 @@ type TabSyncInput = {
  */
 export const useTabSync = ({ tabId, positionMs, canSeek, seekTo }: TabSyncInput): UseTabSyncResult => {
   const [isEnabled, setIsEnabled] = useState(readTabSyncEnabled)
-  const [offsetMs, setOffsetMs] = useState(() => readTabSyncOffset(tabId))
+  const [offsetMs, setOffsetMs] = useState(() => readTabSettings(tabId).offsetMs ?? 0)
   // The latest seek, kept out of the effect so a new function each render
   // does not seek again; only a new position or offset should.
   const seekToRef = useRef(seekTo)
@@ -55,7 +51,7 @@ export const useTabSync = ({ tabId, positionMs, canSeek, seekTo }: TabSyncInput)
 
   const changeOffset = (next: number) => {
     setOffsetMs(next)
-    saveTabSyncOffset(tabId, next)
+    saveTabSettings(tabId, { offsetMs: next })
   }
 
   return {

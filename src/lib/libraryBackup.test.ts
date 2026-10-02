@@ -4,6 +4,7 @@ import {
   InvalidBackupError,
   mergePinnedPlaylists,
   mergeSongs,
+  mergeTabSettings,
   parseLibraryBackup,
 } from './libraryBackup'
 import type { TabFile } from './types'
@@ -27,9 +28,11 @@ describe('library backups', () => {
       tabs: [{ tab, data: bytes(0, 127, 255) }],
       songs: [song],
       pinnedPlaylists: [pin],
+      tabSettings: { 'tab-1': { offsetMs: 1_500, trackIndex: 2 } },
     })
 
     const restored = parseLibraryBackup(JSON.stringify(backup))
+    expect(restored.tabSettings).toEqual({ 'tab-1': { offsetMs: 1_500, trackIndex: 2 } })
 
     expect(restored.tabs).toHaveLength(1)
     expect(restored.tabs[0]!.tab).toEqual(tab)
@@ -44,6 +47,7 @@ describe('library backups', () => {
       tabs: [{ tab, data: large.buffer }],
       songs: [],
       pinnedPlaylists: [],
+      tabSettings: {},
     })
 
     const restored = parseLibraryBackup(JSON.stringify(backup))
@@ -96,6 +100,32 @@ describe('library backups', () => {
     })
 
     expect(() => parseLibraryBackup(text)).toThrow(/file for “Nemo” is damaged/)
+  })
+})
+
+describe('tab settings in backups', () => {
+  const backupWith = (extra: Record<string, unknown>) =>
+    JSON.stringify({ app: 'simple-spotify-player', version: 1, tabs: [], songs: [], pinnedPlaylists: [], ...extra })
+
+  it('reads a backup from before tab settings were saved', () => {
+    expect(parseLibraryBackup(backupWith({})).tabSettings).toEqual({})
+  })
+
+  it('keeps well-formed settings and drops damaged ones without refusing the backup', () => {
+    const restored = parseLibraryBackup(
+      backupWith({ tabSettings: { a: { offsetMs: 500 }, b: { trackIndex: 'two' }, c: 'nope' } }),
+    )
+
+    expect(restored.tabSettings).toEqual({ a: { offsetMs: 500 } })
+  })
+
+  it('lets imported settings win per field', () => {
+    expect(
+      mergeTabSettings(
+        { a: { offsetMs: 100, trackIndex: 1 }, b: { offsetMs: 9 } },
+        { a: { offsetMs: 500 }, c: { trackIndex: 3 } },
+      ),
+    ).toEqual({ a: { offsetMs: 500, trackIndex: 1 }, b: { offsetMs: 9 }, c: { trackIndex: 3 } })
   })
 })
 
