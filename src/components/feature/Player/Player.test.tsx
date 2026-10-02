@@ -849,6 +849,7 @@ describe('Player', () => {
 
       expect(spotify).toHaveTextContent('Song Title')
       expect(togglePlay).toHaveBeenCalledOnce()
+      expect(screen.queryByRole('group', { name: 'Sync with Spotify' })).not.toBeInTheDocument()
     })
 
     it('opens the library, and plays a song from it on its own', async () => {

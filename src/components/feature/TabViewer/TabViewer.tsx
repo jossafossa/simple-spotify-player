@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useAlphaTab } from '~/hooks/useAlphaTab'
 import { useFullPageView } from '~/hooks/useFullPageView'
+import { useTabSync } from '~/hooks/useTabSync'
 import type { TabDataStatus } from '~/hooks/useTabData'
 import { isRenderableFormat } from '~/lib/tabFormat'
 import type { SongRef, TabFile } from '~/lib/types'
@@ -16,10 +17,23 @@ type TabViewerProps = {
   songTabs: TabFile[]
   /** Spotify's own transport, so the song can be played along with. */
   playbackControls?: ReactNode
+  /** Where Spotify is in its song, for the cursor to follow when sync is on. */
+  spotifyPlayback?: SpotifyPlayback
   onSelectTab: (tabId: string) => void
   onManage: (() => void) | undefined
   onClose: () => void
 }
+
+export type SpotifyPlayback = {
+  trackUri: string
+  positionMs: number
+  isPaused: boolean
+}
+
+const SYNC_NUDGE_MS = 500
+
+const formatOffset = (offsetMs: number): string =>
+  `${offsetMs > 0 ? '+' : offsetMs < 0 ? '−' : '±'}${(Math.abs(offsetMs) / 1000).toFixed(1)} s`
 
 const downloadTab = (tab: TabFile, data: ArrayBuffer) => {
   const url = URL.createObjectURL(new Blob([data]))
@@ -45,6 +59,7 @@ export const TabViewer = ({
   song,
   songTabs,
   playbackControls,
+  spotifyPlayback,
   onSelectTab,
   onManage,
   onClose,
@@ -54,6 +69,14 @@ export const TabViewer = ({
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null)
   const alphaTab = useAlphaTab({ container, scrollElement }, isRenderable ? data : undefined)
   useFullPageView(onClose)
+  const sync = useTabSync({
+    tabId: tab.id,
+    positionMs: spotifyPlayback?.positionMs,
+    canSeek: isRenderable && alphaTab.status === 'ready' && alphaTab.isPlayerReady,
+    seekTo: alphaTab.seekTo,
+  })
+  const isFollowing = sync.isEnabled && !!spotifyPlayback
+  const isOtherSong = isFollowing && !!song && song.uri !== spotifyPlayback.trackUri
 
   const notice = (() => {
     if (dataStatus === 'loading') {
@@ -128,8 +151,14 @@ export const TabViewer = ({
                 event.currentTarget.blur()
                 alphaTab.playPause()
               }}
-              disabled={!alphaTab.isPlayerReady}
-              title={alphaTab.isPlayerReady ? undefined : 'Loading the sound font…'}
+              disabled={!alphaTab.isPlayerReady || isFollowing}
+              title={
+                isFollowing
+                  ? 'The tab is following Spotify'
+                  : alphaTab.isPlayerReady
+                    ? undefined
+                    : 'Loading the sound font…'
+              }
             >
               {alphaTab.isPlaying ? 'Pause tab' : 'Play tab'}
             </button>
@@ -140,10 +169,73 @@ export const TabViewer = ({
                 event.currentTarget.blur()
                 alphaTab.stop()
               }}
-              disabled={!alphaTab.isPlayerReady}
+              disabled={!alphaTab.isPlayerReady || isFollowing}
             >
               Stop
             </button>
+          </div>
+        )}
+
+        {spotifyPlayback && isRenderable && alphaTab.status === 'ready' && (
+          <div className={styles.group} role="group" aria-label="Sync with Spotify">
+            <label className={styles.toggle}>
+              <input
+                type="checkbox"
+                checked={sync.isEnabled}
+                onChange={(event) => {
+                  // Two sources of sound at once is never what's wanted.
+                  if (event.target.checked) {
+                    alphaTab.stop()
+                  }
+                  sync.setEnabled(event.target.checked)
+                  event.currentTarget.blur()
+                }}
+              />
+              <span>Sync with Spotify</span>
+            </label>
+            {sync.isEnabled && (
+              <span className={styles.offset}>
+                <button
+                  type="button"
+                  className={styles.nudge}
+                  onClick={(event) => {
+                    event.currentTarget.blur()
+                    sync.nudge(-SYNC_NUDGE_MS)
+                  }}
+                  aria-label="Move the tab half a second earlier"
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  className={styles.offsetValue}
+                  onClick={(event) => {
+                    event.currentTarget.blur()
+                    sync.resetOffset()
+                  }}
+                  title="Offset from Spotify — click to reset"
+                  aria-label={`Offset ${formatOffset(sync.offsetMs)}, click to reset`}
+                >
+                  {formatOffset(sync.offsetMs)}
+                </button>
+                <button
+                  type="button"
+                  className={styles.nudge}
+                  onClick={(event) => {
+                    event.currentTarget.blur()
+                    sync.nudge(SYNC_NUDGE_MS)
+                  }}
+                  aria-label="Move the tab half a second later"
+                >
+                  +
+                </button>
+              </span>
+            )}
+            {isOtherSong && (
+              <span className={styles.warning} role="status">
+                Spotify is playing another song
+              </span>
+            )}
           </div>
         )}
 

@@ -22,6 +22,7 @@ const alphaTabResult = (overrides: Partial<UseAlphaTabResult> = {}): UseAlphaTab
   isPlaying: false,
   playPause: vi.fn(),
   stop: vi.fn(),
+  seekTo: vi.fn(),
   ...overrides,
 })
 
@@ -55,6 +56,7 @@ const renderViewer = (props: Partial<React.ComponentProps<typeof TabViewer>> = {
 
 describe('TabViewer', () => {
   beforeEach(() => {
+    localStorage.clear()
     mockedUseAlphaTab.mockReturnValue(alphaTabResult())
   })
 
@@ -176,5 +178,56 @@ describe('TabViewer', () => {
     const { getByText } = renderViewer({ data: undefined, dataStatus: 'missing' })
 
     expect(getByText(/could not be read from the library/)).toBeInTheDocument()
+  })
+
+  describe('sync with Spotify', () => {
+    const spotifyPlayback = { trackUri: song.uri, positionMs: 12_000, isPaused: false }
+
+    it('is only offered when Spotify is playing', () => {
+      const { queryByRole } = renderViewer()
+
+      expect(queryByRole('checkbox', { name: 'Sync with Spotify' })).not.toBeInTheDocument()
+    })
+
+    it('follows Spotify instead of playing the tab itself', async () => {
+      const user = userEvent.setup()
+      const result = alphaTabResult()
+      mockedUseAlphaTab.mockReturnValue(result)
+      const { getByRole } = renderViewer({ spotifyPlayback })
+
+      await user.click(getByRole('checkbox', { name: 'Sync with Spotify' }))
+
+      expect(result.stop).toHaveBeenCalledOnce()
+      expect(result.seekTo).toHaveBeenLastCalledWith(12_000)
+      expect(getByRole('button', { name: 'Play tab' })).toBeDisabled()
+    })
+
+    it('nudges and resets the offset', async () => {
+      const user = userEvent.setup()
+      const result = alphaTabResult()
+      mockedUseAlphaTab.mockReturnValue(result)
+      const { getByRole } = renderViewer({ spotifyPlayback })
+      await user.click(getByRole('checkbox', { name: 'Sync with Spotify' }))
+
+      await user.click(getByRole('button', { name: 'Move the tab half a second later' }))
+      await user.click(getByRole('button', { name: 'Move the tab half a second later' }))
+      expect(getByRole('button', { name: 'Offset +1.0 s, click to reset' })).toBeInTheDocument()
+      expect(result.seekTo).toHaveBeenLastCalledWith(13_000)
+
+      await user.click(getByRole('button', { name: 'Move the tab half a second earlier' }))
+      await user.click(getByRole('button', { name: /^Offset/ }))
+      expect(getByRole('button', { name: 'Offset ±0.0 s, click to reset' })).toBeInTheDocument()
+    })
+
+    it('warns when Spotify plays another song than the tab’s', async () => {
+      const user = userEvent.setup()
+      const { getByRole, getByText } = renderViewer({
+        spotifyPlayback: { ...spotifyPlayback, trackUri: 'spotify:track:other' },
+      })
+
+      await user.click(getByRole('checkbox', { name: 'Sync with Spotify' }))
+
+      expect(getByText('Spotify is playing another song')).toBeInTheDocument()
+    })
   })
 })

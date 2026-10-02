@@ -342,6 +342,11 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
       </div>
       <TabViewerSlot
         workspace={tabs}
+        spotifyPlayback={{
+          trackUri: playbackState.track.uri,
+          positionMs,
+          isPaused: playbackState.isPaused,
+        }}
         playbackControls={
           <>
             <span className={styles.miniTrack}>

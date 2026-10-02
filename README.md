@@ -74,6 +74,13 @@ Tabs are linked to songs and stored in the browser — no server involved.
   (with a following cursor), separately from Spotify; pick another instrument
   track or another tab on the song; and Spotify's own play/previous/next to
   play along. *← Back to player* (or Escape) returns.
+- **Sync with Spotify** — optional, off by default: tick *Sync with
+  Spotify* in the tab view's bottom bar and the cursor follows the song
+  playing in Spotify instead of the tab's own player, scrolling along and
+  jumping when you seek. A transcription seldom lines up exactly with the
+  recording, so − / + nudge the tab half a second at a time (click the value
+  to reset); the offset is remembered per tab. A tempo that drifts apart
+  within the song cannot be corrected this way.
 - **Finding tabs** — the add-tab dialog searches tab sites for the song
   when you press *Search* (artist and title prefilled, with Spotify's
   "- Remastered 2021" and "(feat. …)" stripped). **Free to download** results — from

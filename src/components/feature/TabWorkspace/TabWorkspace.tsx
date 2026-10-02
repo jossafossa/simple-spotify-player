@@ -1,7 +1,7 @@
 import { OnlineTabSearch } from '~/components/feature/OnlineTabSearch'
 import { TabLibrary } from '~/components/feature/TabLibrary'
 import { TabPicker } from '~/components/feature/TabPicker'
-import { TabViewer } from '~/components/feature/TabViewer'
+import { TabViewer, type SpotifyPlayback } from '~/components/feature/TabViewer'
 import type { ReactNode } from 'react'
 import { onlineQueryFor, type UseTabWorkspaceResult } from '~/hooks/useTabWorkspace'
 import type { TabSong } from '~/lib/types'
@@ -71,9 +71,10 @@ export const TabDialogs = ({ workspace, onPlaySong }: TabDialogsProps) => {
 type TabViewerSlotProps = {
   workspace: UseTabWorkspaceResult
   playbackControls?: ReactNode
+  spotifyPlayback?: SpotifyPlayback
 }
 
-export const TabViewerSlot = ({ workspace, playbackControls }: TabViewerSlotProps) => {
+export const TabViewerSlot = ({ workspace, playbackControls, spotifyPlayback }: TabViewerSlotProps) => {
   const { openTab } = workspace
 
   if (!openTab) {
@@ -92,6 +93,7 @@ export const TabViewerSlot = ({ workspace, playbackControls }: TabViewerSlotProp
       song={song}
       songTabs={openTab.songTabs}
       playbackControls={playbackControls}
+      spotifyPlayback={spotifyPlayback}
       onSelectTab={(tabId) => workspace.openTabInViewer(song, tabId)}
       onManage={song ? () => workspace.openPicker(song) : undefined}
       onClose={workspace.closeViewer}

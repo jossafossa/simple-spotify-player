@@ -21,6 +21,9 @@ class FakeAlphaTabApi {
   error = emitter()
   playerReady = emitter()
   playerStateChanged = emitter()
+  playerPositionChanged = emitter()
+  timePosition = 0
+  scrollToCursor = vi.fn()
   score = { tracks: [{ index: 0 }, { index: 1 }] }
   load = vi.fn(() => FakeAlphaTabApi.loadResult)
   renderTracks = vi.fn()
@@ -152,5 +155,20 @@ describe('useAlphaTab', () => {
     expect(result.current.status).toBe('loading')
     expect(result.current.tracks).toEqual([])
     await waitFor(() => expect(FakeAlphaTabApi.instances).toHaveLength(2))
+  })
+
+  it('moves the cursor from outside once the player is ready, and scrolls to it once it lands', async () => {
+    const { result, api } = await renderReady()
+
+    act(() => result.current.seekTo(5_000))
+    expect(api.timePosition).toBe(0)
+
+    act(() => api.playerReady.emit())
+    act(() => result.current.seekTo(5_000))
+    expect(api.timePosition).toBe(5_000)
+
+    act(() => api.playerPositionChanged.emit())
+    act(() => api.playerPositionChanged.emit())
+    expect(api.scrollToCursor).toHaveBeenCalledOnce()
   })
 })

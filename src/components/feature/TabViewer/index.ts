@@ -1,1 +1,1 @@
-export { TabViewer } from './TabViewer'
+export { TabViewer, type SpotifyPlayback } from './TabViewer'

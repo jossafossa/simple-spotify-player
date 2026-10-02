@@ -200,3 +200,43 @@
   gap: t.$s-3;
   min-width: 0;
 }
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: t.$s-2;
+  font-size: t.$fs-small;
+  color: t.$text-muted;
+  cursor: pointer;
+
+  input {
+    accent-color: t.$accent;
+    cursor: pointer;
+  }
+}
+
+.offset {
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+}
+
+.nudge,
+.offsetValue {
+  @include t.button-ghost;
+
+  padding: t.$s-1 t.$s-2;
+  letter-spacing: 0;
+}
+
+.offsetValue {
+  @include t.numerals;
+
+  min-width: 7ch;
+  text-transform: none;
+}
+
+.warning {
+  font-size: t.$fs-fine;
+  color: t.$danger;
+}

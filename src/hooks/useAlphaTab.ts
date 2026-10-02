@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AlphaTabApi } from '@coderline/alphatab'
 
 export type AlphaTabStatus = 'idle' | 'loading' | 'ready' | 'error'
@@ -19,6 +19,8 @@ export type UseAlphaTabResult = {
   isPlaying: boolean
   playPause: () => void
   stop: () => void
+  /** Moves the cursor to a moment in the song without playing it. */
+  seekTo: (positionMs: number) => void
 }
 
 type AlphaTabElements = {
@@ -36,7 +38,8 @@ export const useAlphaTab = (
   { container, scrollElement }: AlphaTabElements,
   data: ArrayBuffer | undefined,
 ): UseAlphaTabResult => {
-  const [api, setApi] = useState<AlphaTabApi>()
+  // Only ever driven imperatively, never rendered, so a ref rather than state.
+  const apiRef = useRef<AlphaTabApi | undefined>(undefined)
   const [loadedData, setLoadedData] = useState<ArrayBuffer>()
   const [status, setStatus] = useState<Exclude<AlphaTabStatus, 'idle' | 'loading'>>()
   const [title, setTitle] = useState<string>()
@@ -44,6 +47,9 @@ export const useAlphaTab = (
   const [selectedTrackIndex, setSelectedTrackIndex] = useState(0)
   const [isPlayerReady, setIsPlayerReady] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  // alphaTab only scrolls along while its own player plays; a cursor moved
+  // from outside has to be followed by hand once the move lands.
+  const isSeekingFromOutsideRef = useRef(false)
 
   // A new file starts from scratch, during render so the old score's tracks
   // and status never flash against it.
@@ -98,6 +104,12 @@ export const useAlphaTab = (
         instance.playerStateChanged.on((event) => {
           setIsPlaying(event.state === alphaTab.synth.PlayerState.Playing)
         })
+        instance.playerPositionChanged.on(() => {
+          if (isSeekingFromOutsideRef.current) {
+            isSeekingFromOutsideRef.current = false
+            instance.scrollToCursor()
+          }
+        })
 
         // alphaTab reports a file it cannot parse through `error`, but the
         // return value catches the cases where it gives up before that.
@@ -105,7 +117,7 @@ export const useAlphaTab = (
           setStatus('error')
         }
 
-        setApi(instance)
+        apiRef.current = instance
       })
       .catch((error: unknown) => {
         if (!isCancelled) {
@@ -117,11 +129,12 @@ export const useAlphaTab = (
     return () => {
       isCancelled = true
       created?.destroy()
-      setApi(undefined)
+      apiRef.current = undefined
     }
   }, [container, scrollElement, data])
 
   const selectTrack = (index: number) => {
+    const api = apiRef.current
     const track = api?.score?.tracks[index]
     if (!api || !track) {
       return
@@ -134,12 +147,20 @@ export const useAlphaTab = (
 
   const playPause = () => {
     if (isPlayerReady) {
-      api?.playPause()
+      apiRef.current?.playPause()
     }
   }
 
   const stop = () => {
-    api?.stop()
+    apiRef.current?.stop()
+  }
+
+  const seekTo = (positionMs: number) => {
+    const api = apiRef.current
+    if (api && isPlayerReady) {
+      isSeekingFromOutsideRef.current = true
+      api.timePosition = positionMs
+    }
   }
 
   return {
@@ -152,5 +173,6 @@ export const useAlphaTab = (
     isPlaying,
     playPause,
     stop,
+    seekTo,
   }
 }
