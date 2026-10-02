@@ -272,6 +272,41 @@ describe('Player', () => {
     expect(seek).toHaveBeenCalledWith(25_000)
   })
 
+  it('starts the song over on previous mid-song, and goes back a track near its start', async () => {
+    const seek = vi.fn()
+    const previousTrack = vi.fn()
+    const playerAt = (positionMs: number) => ({
+      status: 'ready' as const,
+      playbackState: buildPlaybackState({ positionMs }),
+      togglePlay: vi.fn(),
+      nextTrack: vi.fn(),
+      previousTrack,
+      seek,
+      toggleShuffle: vi.fn(),
+      playTrack: vi.fn(),
+      volume: 50,
+      setVolume: vi.fn(),
+      claimPlayback: vi.fn(),
+      playbackErrorMessage: undefined,
+      isLicenseRefused: false,
+    })
+    const user = userEvent.setup()
+
+    mockedUseSpotifyPlayer.mockReturnValue(playerAt(30_000))
+    const { unmount } = render(<Player accessToken="token" onLogout={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Previous track' }))
+    mockedUseKeyboardControls.mock.lastCall![0].onPrevious()
+    expect(seek).toHaveBeenCalledTimes(2)
+    expect(seek).toHaveBeenCalledWith(0)
+    expect(previousTrack).not.toHaveBeenCalled()
+    unmount()
+
+    mockedUseSpotifyPlayer.mockReturnValue(playerAt(2_000))
+    render(<Player accessToken="token" onLogout={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Previous track' }))
+    expect(previousTrack).toHaveBeenCalledOnce()
+  })
+
   it('jumps to a track picked from the playlist panel, keeping the context', async () => {
     const playTrack = vi.fn()
     mockedUseSpotifyPlayer.mockReturnValue({

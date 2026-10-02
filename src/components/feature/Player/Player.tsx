@@ -38,6 +38,8 @@ const songOf = (track: PlaybackTrack): SongRef => ({
 })
 
 const SEEK_STEP_MS = 5_000
+/** Past this far into a song, previous starts it over, as most players do. */
+const RESTART_WINDOW_MS = 3_000
 const VOLUME_STEP_PERCENT = 5
 
 export const Player = ({ accessToken, onLogout }: PlayerProps) => {
@@ -109,10 +111,19 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
     seek(nextPositionMs)
   }
 
+  const restartOrPrevious = () => {
+    if (positionMs > RESTART_WINDOW_MS) {
+      seek(0)
+      return
+    }
+
+    previousTrack()
+  }
+
   useKeyboardControls({
     onTogglePlay: togglePlay,
     onNext: nextTrack,
-    onPrevious: previousTrack,
+    onPrevious: restartOrPrevious,
     onSeekBackward: () => seekBy(-SEEK_STEP_MS),
     onSeekForward: () => seekBy(SEEK_STEP_MS),
     onVolumeUp: () => changeVolumeBy(VOLUME_STEP_PERCENT),
@@ -353,7 +364,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
           isPaused={playbackState.isPaused}
           onTogglePlay={togglePlay}
           onNext={nextTrack}
-          onPrevious={previousTrack}
+          onPrevious={restartOrPrevious}
           isShuffled={playbackState.isShuffled}
           onToggleShuffle={toggleShuffle}
         />
@@ -382,7 +393,7 @@ export const Player = ({ accessToken, onLogout }: PlayerProps) => {
             isPaused={playbackState.isPaused}
             onTogglePlay={togglePlay}
             onNext={nextTrack}
-            onPrevious={previousTrack}
+            onPrevious={restartOrPrevious}
           />
         </div>
       }
