@@ -102,6 +102,25 @@ describe('useTabWorkspace', () => {
     await waitFor(() => expect(result.current.library.tabs).toEqual([]))
   })
 
+  it('closes the library, and the picker, on the browser’s back button', async () => {
+    const { result } = await renderWorkspace()
+    const pressBack = async () => {
+      const popped = new Promise((resolve) => window.addEventListener('popstate', resolve, { once: true }))
+      act(() => window.history.back())
+      await act(async () => {
+        await popped
+      })
+    }
+
+    act(() => result.current.openLibrary())
+    await pressBack()
+    expect(result.current.isLibraryOpen).toBe(false)
+
+    act(() => result.current.openPicker(song))
+    await pressBack()
+    expect(result.current.pickerSong).toBeUndefined()
+  })
+
   it('waits for the button before searching online, starting from a clean slate', async () => {
     const { result } = await renderWorkspace()
     act(() => result.current.online.search({ artist: 'Old', title: 'Search' }))

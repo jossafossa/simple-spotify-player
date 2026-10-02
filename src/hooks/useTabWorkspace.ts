@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useBackButtonCloses } from '~/hooks/useBackButtonCloses'
 import { useLibraryBackup, type UseLibraryBackupResult } from '~/hooks/useLibraryBackup'
 import { useOnlineTabSearch, type UseOnlineTabSearchResult } from '~/hooks/useOnlineTabSearch'
 import { useTabData, type UseTabDataResult } from '~/hooks/useTabData'
@@ -164,6 +165,19 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
       setOpenTabState(undefined)
     }
   }
+
+  // Topmost first: a preview covers the picker, which covers the open tab.
+  useBackButtonCloses(
+    tabPreview.preview
+      ? tabPreview.closePreview
+      : pickerSong
+        ? () => setPickerSong(undefined)
+        : isLibraryOpen
+          ? () => setIsLibraryOpen(false)
+          : openTab
+            ? () => setOpenTabState(undefined)
+            : undefined,
+  )
 
   return {
     library,

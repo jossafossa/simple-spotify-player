@@ -136,6 +136,9 @@ start and build, which is why those folders are git-ignored.
 | N / P     | Next / previous  |
 | T         | Tap tempo (tab view) |
 
+The browser's back button closes what is open on top of the player — a
+preview, the add-tab dialog, the library, the tab view — one layer per press.
+
 ## Running
 
 ```bash
