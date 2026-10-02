@@ -97,7 +97,7 @@ export const TabViewer = ({
   // The score's own tempo is the default, so it is not remembered as set.
   const setBpm = (bpm: number) =>
     clampBpm(bpm) === alphaTab.scoreBpm ? tempo.reset() : tempo.setBpm(bpm)
-  const tap = useTapTempo(setBpm)
+  const tapTempo = useTapTempo(setBpm)
   const spotifyTempo = useSpotifyTempo(
     song && loadSongBpm ? () => loadSongBpm(song) : undefined,
     setBpm,
@@ -317,7 +317,8 @@ export const TabViewer = ({
               scoreBpm={alphaTab.scoreBpm}
               isSet={tempo.bpm !== undefined}
               onChange={setBpm}
-              onTap={tap}
+              onTap={tapTempo.tap}
+              tapCount={tapTempo.tapCount}
               onReset={tempo.reset}
               spotify={
                 song && loadSongBpm

@@ -7,10 +7,12 @@ describe('useTapTempo', () => {
 
   beforeEach(() => {
     now = 0
+    vi.useFakeTimers()
     vi.spyOn(performance, 'now').mockImplementation(() => now)
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
@@ -19,47 +21,53 @@ describe('useTapTempo', () => {
     act(() => tap())
   }
 
-  it('reports the tempo from the second tap on', () => {
+  it('reports the averaged tempo from the fourth tap on, counting the taps', () => {
     const onBpm = vi.fn()
     const { result } = renderHook(() => useTapTempo(onBpm))
 
-    tapAt(result.current, 0)
+    tapAt(result.current.tap, 0)
+    tapAt(result.current.tap, 500)
+    tapAt(result.current.tap, 1000)
     expect(onBpm).not.toHaveBeenCalled()
+    expect(result.current.tapCount).toBe(3)
 
-    tapAt(result.current, 500)
+    tapAt(result.current.tap, 1500)
     expect(onBpm).toHaveBeenLastCalledWith(120)
 
-    tapAt(result.current, 1000)
+    tapAt(result.current.tap, 2000)
     expect(onBpm).toHaveBeenCalledTimes(2)
   })
 
-  it('starts counting again after a pause', () => {
+  it('starts a new count after a pause', () => {
     const onBpm = vi.fn()
     const { result } = renderHook(() => useTapTempo(onBpm))
+    ;[0, 500, 1000].forEach((time) => tapAt(result.current.tap, time))
 
-    tapAt(result.current, 0)
-    tapAt(result.current, 500)
-    tapAt(result.current, 5000)
-    expect(onBpm).toHaveBeenCalledTimes(1)
+    act(() => vi.advanceTimersByTime(2000))
+    expect(result.current.tapCount).toBe(0)
 
-    tapAt(result.current, 6000)
+    ;[5000, 6000, 7000].forEach((time) => tapAt(result.current.tap, time))
+    expect(onBpm).not.toHaveBeenCalled()
+    tapAt(result.current.tap, 8000)
     expect(onBpm).toHaveBeenLastCalledWith(60)
   })
+
   it('taps on the T key, but not while typing', () => {
     const onBpm = vi.fn()
-    renderHook(() => useTapTempo(onBpm))
+    const { result } = renderHook(() => useTapTempo(onBpm))
     const input = document.createElement('input')
     document.body.append(input)
 
     now = 0
-    fireEvent.keyDown(window, { key: 't' })
+    act(() => {
+      fireEvent.keyDown(window, { key: 't' })
+    })
     now = 400
-    fireEvent.keyDown(input, { key: 't' })
-    now = 500
-    fireEvent.keyDown(window, { key: 't' })
+    act(() => {
+      fireEvent.keyDown(input, { key: 't' })
+    })
 
-    expect(onBpm).toHaveBeenCalledOnce()
-    expect(onBpm).toHaveBeenCalledWith(120)
+    expect(result.current.tapCount).toBe(1)
     input.remove()
   })
 })

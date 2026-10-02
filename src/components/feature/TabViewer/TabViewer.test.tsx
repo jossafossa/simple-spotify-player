@@ -370,8 +370,14 @@ describe('TabViewer', () => {
       const { getByRole } = renderViewer()
 
       const tap = getByRole('button', { name: 'Tap' })
-      fireEvent.pointerDown(tap)
-      now = 600
+      for (const time of [0, 600, 1200]) {
+        now = time
+        fireEvent.pointerDown(tap)
+      }
+      expect(tap).toHaveTextContent('Tap 3')
+      expect(lastBpmOption()).toBeUndefined()
+
+      now = 1800
       fireEvent.pointerDown(tap)
 
       expect(lastBpmOption()).toBe(100)

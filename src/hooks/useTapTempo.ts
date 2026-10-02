@@ -1,21 +1,27 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { bpmFromTaps } from '~/lib/tempo'
 
 /** A pause this long between taps starts a new count. */
 const TAP_RESET_MS = 2000
-
 const TAP_KEY = 't'
 
 const isTypingIntoField = (target: EventTarget | null): boolean =>
   target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')
 
+export type UseTapTempoResult = {
+  tap: () => void
+  /** How many taps the current run has, or 0 between runs. */
+  tapCount: number
+}
+
 /**
- * Turns taps on the beat into a tempo, reported from the second tap on and
- * refined with every tap after. The T key taps too, since a key can be hit
- * on the beat more precisely than a button found with the mouse.
+ * Turns taps on the beat into a tempo, averaged over the whole run and
+ * refined with every tap. The T key taps too, since a key can be hit on the
+ * beat more precisely than a button found with the mouse.
  */
-export const useTapTempo = (onBpm: (bpm: number) => void): (() => void) => {
+export const useTapTempo = (onBpm: (bpm: number) => void): UseTapTempoResult => {
   const tapsRef = useRef<number[]>([])
+  const [tapCount, setTapCount] = useState(0)
 
   const tap = () => {
     const now = performance.now()
@@ -24,12 +30,27 @@ export const useTapTempo = (onBpm: (bpm: number) => void): (() => void) => {
       tapsRef.current = []
     }
 
-    tapsRef.current = [...tapsRef.current, now].slice(-16)
+    tapsRef.current = [...tapsRef.current, now]
+    setTapCount(tapsRef.current.length)
     const bpm = bpmFromTaps(tapsRef.current)
     if (bpm !== undefined) {
       onBpm(bpm)
     }
   }
+
+  // The count goes once the run is over, so it never shows a stale run.
+  useEffect(() => {
+    if (tapCount === 0) {
+      return
+    }
+
+    const timeout = window.setTimeout(() => {
+      tapsRef.current = []
+      setTapCount(0)
+    }, TAP_RESET_MS)
+    return () => window.clearTimeout(timeout)
+  }, [tapCount])
+
   const tapRef = useRef(tap)
 
   useEffect(() => {
@@ -49,5 +70,5 @@ export const useTapTempo = (onBpm: (bpm: number) => void): (() => void) => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  return tap
+  return { tap, tapCount }
 }

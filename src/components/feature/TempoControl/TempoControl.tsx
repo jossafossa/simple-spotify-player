@@ -10,6 +10,8 @@ type TempoControlProps = {
   isSet: boolean
   onChange: (bpm: number) => void
   onTap: () => void
+  /** Taps in the current run, shown while tapping. */
+  tapCount: number
   onReset: () => void
   /** Left out where there is no Spotify song to ask about. */
   spotify?: { status: SpotifyTempoStatus; onRequest: () => void }
@@ -33,6 +35,7 @@ export const TempoControl = ({
   isSet,
   onChange,
   onTap,
+  tapCount,
   onReset,
   spotify,
 }: TempoControlProps) => {
@@ -79,9 +82,10 @@ export const TempoControl = ({
           event.preventDefault()
           onTap()
         }}
-        title="Tap along to the beat (T)"
+        title="Tap along to the beat (T) — the more taps, the closer the tempo"
+        aria-label="Tap"
       >
-        Tap
+        {tapCount > 0 ? `Tap ${tapCount}` : 'Tap'}
       </button>
       {spotify && spotify.status !== 'unavailable' && (
         <button
