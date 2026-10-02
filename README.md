@@ -68,6 +68,9 @@ Tabs are linked to songs and stored in the browser — no server involved.
   now-playing card) opens that song's tabs. Search the library and **Add** a
   tab you already have, or upload a new file; it is stored and linked at once.
   A track with tabs keeps its TAB button lit, and clicking it opens the tab.
+  A file stored twice in the library is offered once: tabs of the same size
+  are compared byte for byte, and only the one added first is listed — or
+  none, when the file is already on the song.
 - **Viewing** — the tab opens as a full-page view, drawn as notation and
   tablature by [alphaTab](https://alphatab.net/). All controls sit in a bar
   along the bottom: the transport in the middle plays whichever *Sound* is

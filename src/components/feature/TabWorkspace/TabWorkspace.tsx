@@ -27,6 +27,7 @@ export const TabDialogs = ({ workspace, onPlaySong }: TabDialogsProps) => {
       <TabPicker
         song={pickerSong}
         tabs={library.tabs}
+        fingerprints={workspace.fingerprints}
         linkedTabIds={linkedTabIds}
         uploadError={workspace.uploadError}
         onLink={(tabId) => void library.linkTab(pickerSong, tabId)}

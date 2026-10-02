@@ -70,6 +70,19 @@ describe('TabPicker', () => {
     expect(onPreview).toHaveBeenCalledWith('amaranth')
   })
 
+  it('offers a file in the library only once', () => {
+    const copy = { ...buildTab('copy', 'Amaranth (copy)'), addedAt: 2 }
+    const copyOfLinked = { ...buildTab('nemo-copy', 'Nemo solo again'), addedAt: 3 }
+    const { getByRole, queryByRole } = renderPicker({
+      tabs: [nemo, copyOfLinked, copy, amaranth],
+      fingerprints: { nemo: 'n', 'nemo-copy': 'n', copy: 'a', amaranth: 'a' },
+    })
+
+    expect(getByRole('button', { name: 'Add Amaranth' })).toBeInTheDocument()
+    expect(queryByRole('button', { name: 'Add Amaranth (copy)' })).not.toBeInTheDocument()
+    expect(queryByRole('button', { name: 'Add Nemo solo again' })).not.toBeInTheDocument()
+  })
+
   it('says when nothing matches', async () => {
     const user = userEvent.setup()
     const { getByRole, getByText } = renderPicker()

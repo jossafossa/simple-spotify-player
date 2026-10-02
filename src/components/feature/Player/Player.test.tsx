@@ -81,6 +81,7 @@ const buildWorkspace = (overrides: Partial<UseTabWorkspaceResult> = {}): UseTabW
     removeTab: vi.fn(),
     reload: vi.fn(),
   },
+  fingerprints: {},
   backup: { status: { kind: 'idle' }, exportLibrary: vi.fn(), importLibrary: vi.fn() },
   tabCountFor: vi.fn(() => 0),
   openTab: undefined,

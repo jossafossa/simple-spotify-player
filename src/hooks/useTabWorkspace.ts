@@ -3,6 +3,7 @@ import { useBackButtonCloses } from '~/hooks/useBackButtonCloses'
 import { useLibraryBackup, type UseLibraryBackupResult } from '~/hooks/useLibraryBackup'
 import { useOnlineTabSearch, type UseOnlineTabSearchResult } from '~/hooks/useOnlineTabSearch'
 import { useTabData, type UseTabDataResult } from '~/hooks/useTabData'
+import { useTabFingerprints } from '~/hooks/useTabFingerprints'
 import { useTabPreview, type TabPreview } from '~/hooks/useTabPreview'
 import { useTabLibrary, type UseTabLibraryResult } from '~/hooks/useTabLibrary'
 import {
@@ -22,6 +23,8 @@ type OpenTab = {
 
 export type UseTabWorkspaceResult = {
   library: UseTabLibraryResult
+  /** Fingerprints of library tabs that may be copies of each other, by tab id. */
+  fingerprints: Record<string, string>
   backup: UseLibraryBackupResult
   /** How many tabs the song has — matched across relinked copies and remasters. */
   tabCountFor: (song: SongRef) => number
@@ -73,6 +76,7 @@ const describeError = (error: unknown): string =>
  */
 export const useTabWorkspace = (): UseTabWorkspaceResult => {
   const library = useTabLibrary()
+  const fingerprints = useTabFingerprints(library.tabs)
   const backup = useLibraryBackup(library.reload)
   const [openTabState, setOpenTabState] = useState<OpenTab>()
   const [pickerSong, setPickerSong] = useState<SongRef>()
@@ -196,6 +200,7 @@ export const useTabWorkspace = (): UseTabWorkspaceResult => {
 
   return {
     library,
+    fingerprints,
     backup,
     tabCountFor,
     openTab,

@@ -3,6 +3,7 @@ import { FileButton } from '~/components/ui/FileButton'
 import { Modal } from '~/components/ui/Modal'
 import { formatFileSize } from '~/lib/formatFileSize'
 import { matchesSearch } from '~/lib/matchesSearch'
+import { withoutDuplicates } from '~/lib/tabDuplicates'
 import { TAB_FILE_ACCEPT } from '~/lib/tabFormat'
 import type { SongRef, TabFile } from '~/lib/types'
 import styles from './TabPicker.module.scss'
@@ -10,6 +11,8 @@ import styles from './TabPicker.module.scss'
 type TabPickerProps = {
   song: SongRef
   tabs: TabFile[]
+  /** Fingerprints of tabs that may be copies, so a copy is only offered once. */
+  fingerprints?: Record<string, string>
   linkedTabIds: string[]
   /** Set when the last upload was refused, e.g. for an unknown file type. */
   uploadError: string | undefined
@@ -36,6 +39,7 @@ const describeTab = (tab: TabFile): string =>
 export const TabPicker = ({
   song,
   tabs,
+  fingerprints = {},
   linkedTabIds,
   uploadError,
   onLink,
@@ -48,8 +52,10 @@ export const TabPicker = ({
 }: TabPickerProps) => {
   const [query, setQuery] = useState('')
   const linkedTabs = linkedTabIds.flatMap((id) => tabs.filter((tab) => tab.id === id))
-  const candidates = tabs.filter(
-    (tab) => !linkedTabIds.includes(tab.id) && matchesSearch(query, [tab.name, tab.fileName]),
+  const candidates = withoutDuplicates(
+    tabs.filter((tab) => !linkedTabIds.includes(tab.id) && matchesSearch(query, [tab.name, tab.fileName])),
+    linkedTabs,
+    fingerprints,
   )
 
   return (
