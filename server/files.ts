@@ -3,6 +3,7 @@ import { gprotabFiles } from './sources/gprotab.ts'
 import { gtptabsFiles } from './sources/gtptabs.ts'
 import { guitarprotabsFiles } from './sources/guitarprotabs.ts'
 import { theguitarlessonFiles } from './sources/theguitarlesson.ts'
+import { ultimateGuitarFiles } from './sources/ultimateGuitar.ts'
 import type { DownloadedFile, FileSource, TabSource } from './types.ts'
 
 const CACHE_TTL_MS = 10 * 60_000
@@ -14,6 +15,7 @@ export const FILE_SOURCES: Partial<Record<TabSource, FileSource>> = {
   gtptabs: gtptabsFiles,
   guitarprotabs: guitarprotabsFiles,
   theguitarlesson: theguitarlessonFiles,
+  'ultimate-guitar': ultimateGuitarFiles,
 }
 
 export class NotDownloadableError extends Error {

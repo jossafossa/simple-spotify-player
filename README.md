@@ -115,9 +115,11 @@ Tabs are linked to songs and stored in the browser — no server involved.
   downloaded, stored and linked to the song. These sites copy each other's
   files, often under another title, so the search fetches the files and
   lists each one once, with its size; a file already in the library is left
-  out. Songsterr and Ultimate Guitar results are listed too, with ratings
-  and votes, but their files need an account there, so they open on their
-  site: download there, then upload.
+  out. Ultimate Guitar's public Guitar Pro and Power Tab files download the
+  same way, from the token their tab page carries; its official and paid
+  tabs, and every Songsterr result, need an account there, so they are
+  listed with ratings and votes and open on their site: download there,
+  then upload.
 - **Library** — *Tab library* lists every song with tabs (open a tab, play the
   song on its own, manage its tabs) and every file (open, delete), all
   searchable by song, artist or tab name.
