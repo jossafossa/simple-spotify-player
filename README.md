@@ -31,7 +31,7 @@ written off for good. An explicit choice from the toggle always wins over both.
 
 `src/components/` is split by how much each component knows:
 
-- **`ui/`** — `Card`, `Controls`, `ProgressBar`, `VolumeControl`, `Modal`,
+- **`ui/`** — `AppBar`, `Card`, `Controls`, `ProgressBar`, `VolumeControl`, `Modal`,
   `FileButton`. No Spotify concepts at all; a media transport, a scrubber and
   a few generic building blocks that would work in any app.
 - **`feature/`** — everything that knows what a playlist, a device, a playback

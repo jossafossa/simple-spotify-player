@@ -1,0 +1,21 @@
+@use '../../theme' as t;
+
+.bar {
+  width: min(764px, 100%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: t.$s-3;
+  padding-bottom: t.$s-3;
+  border-bottom: 1px solid t.$rule;
+  font-family: t.$sans;
+}
+
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: t.$s-3;
+  min-width: 0;
+}

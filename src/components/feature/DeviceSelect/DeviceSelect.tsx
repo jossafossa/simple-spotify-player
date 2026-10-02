@@ -5,12 +5,21 @@ type DeviceSelectProps = {
   devices: RemoteDevice[]
   activeDeviceName: string | undefined
   onSelect: (deviceId: string) => void
+  /** In a bar rather than ruled off at the foot of a card. */
+  isInline?: boolean
 }
 
-export const DeviceSelect = ({ devices, activeDeviceName, onSelect }: DeviceSelectProps) => {
+export const DeviceSelect = ({
+  devices,
+  activeDeviceName,
+  onSelect,
+  isInline = false,
+}: DeviceSelectProps) => {
+  const inline = isInline ? ` ${styles.inline}` : ''
+
   if (devices.length === 0) {
     return (
-      <p className={styles.empty}>
+      <p className={`${styles.empty}${inline}`}>
         No Spotify devices are awake. Open Spotify on a phone, desktop or
         speaker and it will appear here.
       </p>
@@ -20,7 +29,7 @@ export const DeviceSelect = ({ devices, activeDeviceName, onSelect }: DeviceSele
   const activeDevice = devices.find((device) => device.isActive)
 
   return (
-    <label className={styles.wrapper}>
+    <label className={`${styles.wrapper}${inline}`}>
       <span className={styles.label}>Playing on</span>
       <select
         className={styles.select}

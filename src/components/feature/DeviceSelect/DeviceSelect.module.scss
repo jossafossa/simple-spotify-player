@@ -46,3 +46,10 @@
   line-height: t.$lh-body;
   color: t.$text-muted;
 }
+
+/** Sitting in the app bar: no rule above, only as wide as it needs. */
+.inline {
+  width: auto;
+  padding-top: 0;
+  border-top: 0;
+}

@@ -802,7 +802,7 @@ describe('Player', () => {
 
       render(<Player accessToken="token" onLogout={vi.fn()} />)
 
-      expect(screen.getByRole('button', { name: 'Show tab' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'View tab' })).toBeInTheDocument()
     })
 
     it('gives the open tab Spotify’s transport to play along with', async () => {
@@ -871,6 +871,93 @@ describe('Player', () => {
 
       expect(workspace.openLibrary).toHaveBeenCalledOnce()
       expect(playTrack).toHaveBeenCalledWith(undefined, 'spotify:track:nemo')
+    })
+  })
+
+  describe('layout', () => {
+    const renderPlaying = (overrides: Partial<ReturnType<typeof useSpotifyPlayer>> = {}) => {
+      mockedUseSpotifyPlayer.mockReturnValue({
+        status: 'ready',
+        playbackState: buildPlaybackState(),
+        togglePlay: vi.fn(),
+        nextTrack: vi.fn(),
+        previousTrack: vi.fn(),
+        seek: vi.fn(),
+        toggleShuffle: vi.fn(),
+        playTrack: vi.fn(),
+        volume: 50,
+        setVolume: vi.fn(),
+        claimPlayback: vi.fn(),
+        playbackErrorMessage: undefined,
+        isLicenseRefused: false,
+        ...overrides,
+      })
+      return render(<Player accessToken="token" onLogout={vi.fn()} />)
+    }
+
+    const nowPlayingCard = () => screen.getByRole('region', { name: 'Now playing' })
+
+    it('keeps the now-playing card to what is playing and its tab', () => {
+      renderPlaying()
+      const card = nowPlayingCard()
+
+      expect(within(card).getByText('Song Title')).toBeInTheDocument()
+      expect(within(card).getByRole('progressbar')).toBeInTheDocument()
+      expect(within(card).getByRole('button', { name: 'Pause' })).toBeInTheDocument()
+      expect(within(card).getByRole('slider', { name: 'Volume' })).toBeInTheDocument()
+      expect(within(card).getByRole('button', { name: 'Add tab' })).toBeInTheDocument()
+      expect(within(card).getAllByRole('button')).toHaveLength(6)
+    })
+
+    it('puts the mode, the library and logging out in the bar', () => {
+      renderPlaying()
+      const bar = screen.getByRole('banner')
+
+      expect(within(bar).getByRole('button', { name: 'Tab library' })).toBeInTheDocument()
+      expect(within(bar).getByRole('button', { name: 'Log out' })).toBeInTheDocument()
+      expect(within(nowPlayingCard()).queryByRole('button', { name: 'Log out' })).not.toBeInTheDocument()
+      expect(within(nowPlayingCard()).queryByText(/Space play\/pause/)).not.toBeInTheDocument()
+    })
+
+    it('shows playback trouble outside the card', () => {
+      renderPlaying({ playbackErrorMessage: 'Protected content is off.' })
+
+      const notice = screen.getByText(/Protected content is off/)
+      expect(nowPlayingCard()).not.toContainElement(notice)
+    })
+
+    it('keeps the device picker in the bar in remote mode', () => {
+      mockedUsePlaybackMode.mockReturnValue({ mode: 'remote', setMode, reportLocalPlaybackFailure })
+      mockedUseSpotifyPlayer.mockReturnValue({
+        status: 'idle',
+        playbackState: undefined,
+        togglePlay: vi.fn(),
+        nextTrack: vi.fn(),
+        previousTrack: vi.fn(),
+        seek: vi.fn(),
+        toggleShuffle: vi.fn(),
+        playTrack: vi.fn(),
+        volume: 50,
+        setVolume: vi.fn(),
+        claimPlayback: vi.fn(),
+        playbackErrorMessage: undefined,
+        isLicenseRefused: false,
+      })
+      mockedUseRemotePlayer.mockReturnValue({
+        ...remoteResult,
+        status: 'ready',
+        playbackState: buildPlaybackState(),
+        devices: [{ id: 'device-1', name: 'Kitchen speaker', isActive: true }],
+        activeDeviceName: 'Kitchen speaker',
+        toggleShuffle: vi.fn(),
+        volume: 40,
+        setVolume: vi.fn(),
+      })
+
+      render(<Player accessToken="token" onLogout={vi.fn()} />)
+
+      expect(within(screen.getByRole('banner')).getByDisplayValue('Kitchen speaker')).toBeInTheDocument()
+      expect(within(nowPlayingCard()).queryByDisplayValue('Kitchen speaker')).not.toBeInTheDocument()
     })
   })
 })

@@ -1,4 +1,5 @@
 // Domain-free building blocks: no Spotify concepts, reusable as-is.
+export { AppBar } from './ui/AppBar'
 export { Card } from './ui/Card'
 export { Controls } from './ui/Controls'
 export { ProgressBar } from './ui/ProgressBar'
